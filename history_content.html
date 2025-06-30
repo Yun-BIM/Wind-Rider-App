@@ -76,51 +76,9 @@
         // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
         let db;
         const DB_NAME = 'WindRiderDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'records';
-
-        /**
-         * 初始化 IndexedDB 資料庫。
-         */
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => {
-                    db = request.result;
-                    console.log('History iframe: IndexedDB 連接成功');
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('createdAt', 'createdAt', { unique: false });
-                        store.createIndex('journalType', 'journalType', { unique: false });
-                        store.createIndex('creator', 'creator', { unique: false });
-                        console.log('History iframe: Object Store 已創建');
-                    }
-                };
-            });
-        }
-
-        /**
-         * 從 IndexedDB 獲取所有記錄。
-         */
-        async function getAllRecords() {
-            if (!db) {
-                await initDB();
-            }
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction([STORE_NAME], 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(request.error);
-            });
-        }
+        const DB_VERSION = 5; // *** 與主頁面和其他 iframe 保持一致 ***
+        const STORE_NAME_RECORDS = 'records'; // 記錄 Object Store 名稱
+        const STORE_NAME_PROFILE = 'userProfile'; // 使用者主檔 Object Store 名稱
 
         /**
          * 顯示應用程式訊息 (成功或錯誤)。
@@ -140,7 +98,6 @@
                 ${type === 'success' ? 'background: #48bb78;' : 'background: #f56565;'}
             `;
             messageDiv.textContent = message;
-            // 將訊息添加到父視窗的 body，因為 iframe 自身的 body 可能太小
             if (window.parent && window.parent.document) {
                 window.parent.document.body.appendChild(messageDiv);
             } else {
@@ -150,6 +107,117 @@
             setTimeout(() => {
                 messageDiv.remove();
             }, 3000);
+        }
+
+        /**
+         * 初始化 IndexedDB 資料庫。
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                console.log('History iframe: 嘗試打開 IndexedDB 資料庫...');
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error('History iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
+                    showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
+                    reject(event.target.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('History iframe: IndexedDB 連接成功，版本:', db.version);
+                    // 在 onsuccess 中檢查 object stores 是否存在
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.warn('History iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
+                    }
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    console.log('History iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
+                    
+                    // 創建 records store
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        try {
+                            const recordsStore = db.createObjectStore(STORE_NAME_RECORDS, { keyPath: 'id', autoIncrement: true });
+                            recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
+                            recordsStore.createIndex('journalType', 'journalType', { unique: false });
+                            recordsStore.createIndex('creator', 'creator', { unique: false });
+                            console.log('History iframe: records Object Store 已創建');
+                        } catch (e) {
+                            console.error('History iframe: 創建 records Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建記錄儲存', 'error');
+                            event.preventDefault(); 
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('History iframe: records Object Store 已存在 (無需創建)');
+                    }
+
+                    // 創建 userProfile object store
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        try {
+                            const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); 
+                            console.log('History iframe: userProfile Object Store 已創建');
+                        } catch (e) {
+                            console.error('History iframe: 創建 userProfile Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建個人設定儲存', 'error');
+                            event.preventDefault(); 
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('History iframe: userProfile Object Store 已存在 (無需創建)');
+                    }
+                };
+            });
+        }
+
+        /**
+         * 從 IndexedDB 獲取所有記錄。
+         */
+        async function getAllRecords() {
+            if (!db) {
+                console.error('History iframe: getAllRecords 錯誤 - 資料庫未初始化。');
+                showMessage('無法獲取記錄，資料庫未準備', 'error');
+                return [];
+            }
+            
+            // 檢查 object store 是否存在
+            if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                console.error('History iframe: getAllRecords 錯誤 - records 物件儲存不存在。');
+                showMessage('無法獲取記錄，資料庫結構異常', 'error');
+                return [];
+            }
+
+            return new Promise((resolve, reject) => {
+                try {
+                    const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
+                    tx.onerror = (event) => {
+                        console.error('History iframe: 獲取所有記錄事務錯誤:', event.target.error);
+                        showMessage('獲取歷史記錄事務失敗', 'error');
+                        reject(event.target.error);
+                    };
+                    const store = tx.objectStore(STORE_NAME_RECORDS);
+                    const request = store.getAll();
+
+                    request.onsuccess = () => {
+                        console.log('History iframe: 所有記錄獲取成功:', request.result);
+                        resolve(request.result || []);
+                    };
+                    request.onerror = (event) => {
+                        console.error('History iframe: 獲取所有記錄請求失敗:', event.target.error);
+                        showMessage('獲取歷史記錄請求失敗', 'error');
+                        reject(event.target.error);
+                    };
+                } catch (e) {
+                    console.error('History iframe: getAllRecords 事務或物件儲存操作失敗:', e);
+                    showMessage('無法獲取歷史記錄，請檢查資料庫操作', 'error');
+                    reject(e);
+                }
+            });
         }
 
         /**
@@ -207,6 +275,7 @@
                 }
             } catch (error) {
                 console.error('History iframe: 顯示歷史記錄失敗:', error);
+                showMessage('顯示歷史記錄失敗，請稍後再試', 'error');
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'history-item';
                 errorDiv.style.color = '#f56565';
@@ -217,13 +286,14 @@
 
         // 頁面載入時初始化並顯示歷史記錄
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('History iframe: DOMContentLoaded 觸發。');
             try {
                 await initDB();
                 await showHistory(); // 載入時立即顯示歷史記錄
-                console.log('History iframe: 頁面初始化完成並已顯示歷史記錄');
+                console.log('History iframe: 頁面初始化完成並執行顯示歷史記錄。');
             } catch (error) {
-                console.error('History iframe: 初始化失敗:', error);
-                showMessage('歷史頁面初始化失敗', 'error');
+                console.error('History iframe: 初始化或顯示歷史記錄失敗:', error);
+                showMessage('歷史頁面初始化失敗，請檢查瀏覽器控制台', 'error');
             }
         });
     </script>
