@@ -1,4 +1,525 @@
-// 取得所有記錄
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人生航行 Wind Rider</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 30px;
+            text-align: left;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        /* 使用者狀態欄 */
+        .user-status {
+            margin: 0 30px 20px 30px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+
+        .status-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-main {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .status-info h3 {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .status-info p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .toggle-icon {
+            color: white;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .status-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-details.expanded {
+            max-height: 500px;
+        }
+
+        .detail-section {
+            padding: 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .detail-section:last-child {
+            border-bottom: none;
+        }
+
+        .detail-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-icon {
+            font-size: 16px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .abilities {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .ability-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 8px;
+        }
+
+        .ability-icon {
+            font-size: 16px;
+        }
+
+        .ability-text {
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .support-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .support-item {
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(116, 75, 162, 0.1);
+            border-radius: 12px;
+        }
+
+        .support-icon {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .support-text {
+            font-size: 11px;
+            color: #4a5568;
+        }
+
+        /* 原有的導航和內容區域 */
+        .nav-tabs {
+            display: flex;
+            padding: 0 30px;
+            margin-bottom: 30px;
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            border-radius: 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-tab:last-child {
+            margin-right: 0;
+        }
+
+        .nav-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-tab:not(.active) {
+            background: #f7fafc;
+            color: #718096;
+        }
+
+        .content {
+            padding: 0 30px 30px 30px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .input-area {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            min-height: 120px;
+            position: relative;
+        }
+
+        .input-placeholder {
+            color: #a0aec0;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+
+        .voice-button {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-button:hover {
+            background: #cbd5e0;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .action-button {
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-button.secondary {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            color: white;
+        }
+
+        .action-button.tertiary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 標題區域 -->
+        <div class="header">
+            <h1 class="title">人生航行 Wind Rider</h1>
+            <p class="subtitle">記錄生活航程，分析情緒風向，探索內心海域</p>
+        </div>
+
+        <!-- 使用者狀態欄 -->
+        <div class="user-status">
+            <div class="status-header" onclick="toggleStatus()">
+                <div class="status-main">
+                    <div class="avatar">A</div>
+                    <div class="status-info">
+                        <h3>掌舵者：Anna</h3>
+                        <p>航行層級：第一層｜CI｜靠近自己</p>
+                    </div>
+                </div>
+                <div class="toggle-icon" id="toggleIcon">▼</div>
+            </div>
+            
+            <div class="status-details" id="statusDetails">
+                <div class="detail-section">
+                    <div class="detail-title">
+                        <span class="detail-icon">💎</span>
+                        信念與價值觀
+                    </div>
+                    <div class="tags">
+                        <span class="tag">誠信正直</span>
+                        <span class="tag">持續精進</span>
+                        <span class="tag">投資人際關係</span>
+                        <span class="tag">多元幸福觀點</span>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-title">
+                        <span class="detail-icon">⚡</span>
+                        優勢能力
+                    </div>
+                    <div class="abilities">
+                        <div class="ability-item">
+                            <span class="ability-icon">🧠</span>
+                            <span class="ability-text">系統思考</span>
+                        </div>
+                        <div class="ability-item">
+                            <span class="ability-icon">📋</span>
+                            <span class="ability-text">內容產品化</span>
+                        </div>
+                        <div class="ability-item">
+                            <span class="ability-icon">📖</span>
+                            <span class="ability-text">敘事表達</span>
+                        </div>
+                        <div class="ability-item">
+                            <span class="ability-icon">❤️</span>
+                            <span class="ability-text">同理心</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-title">
+                        <span class="detail-icon">🤝</span>
+                        支持系統
+                    </div>
+                    <div class="support-grid">
+                        <div class="support-item">
+                            <div class="support-icon">💕</div>
+                            <div class="support-text">伴侶</div>
+                        </div>
+                        <div class="support-item">
+                            <div class="support-icon">👨‍👩‍👧‍👦</div>
+                            <div class="support-text">親子</div>
+                        </div>
+                        <div class="support-item">
+                            <div class="support-icon">👫</div>
+                            <div class="support-text">友誼</div>
+                        </div>
+                        <div class="support-item">
+                            <div class="support-icon">🌐</div>
+                            <div class="support-text">社群</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 導航標籤 -->
+        <div class="nav-tabs">
+            <div class="nav-tab active">
+                <span>➕</span>
+                記錄
+            </div>
+            <div class="nav-tab">
+                <span>🧠</span>
+                分析
+            </div>
+            <div class="nav-tab">
+                <span>📋</span>
+                歷史
+            </div>
+            <div class="nav-tab">
+                <span>📊</span>
+                統計
+            </div>
+        </div>
+
+        <!-- 內容區域 -->
+        <div class="content">
+            <h2 class="section-title">新增記錄</h2>
+            
+            <div class="input-area">
+                <div class="input-placeholder">分享您今天的想法、心得或生活點滴...</div>
+                <div class="voice-button">🎤</div>
+            </div>
+
+            <div class="action-buttons">
+                <div class="action-button primary">
+                    <span>⛵</span>
+                    航行日誌
+                </div>
+                <div class="action-button secondary">
+                    <span>⚡</span>
+                    觸發型事件記錄
+                </div>
+                <div class="action-button tertiary">
+                    <span>🎯</span>
+                    日記映射
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IndexedDB 資料庫初始化
+        let db;
+        const DB_NAME = 'WindRiderDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'records';
+
+        // 初始化資料庫
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    
+                    // 創建記錄主檔表
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { 
+                            keyPath: 'id', 
+                            autoIncrement: true 
+                        });
+                        
+                        // 創建索引
+                        store.createIndex('createdAt', 'createdAt', { unique: false });
+                        store.createIndex('journalType', 'journalType', { unique: false });
+                        store.createIndex('creator', 'creator', { unique: false });
+                    }
+                };
+            });
+        }
+
+        // 新增記錄
+        async function addRecord(recordText, journalType) {
+            if (!db) {
+                await initDB();
+            }
+            
+            const record = {
+                recordText: recordText,
+                journalType: journalType,
+                createdAt: new Date().toISOString(),
+                creator: 'Anna' // 目前使用固定值，未來可從使用者狀態取得
+            };
+            
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.add(record);
+                
+                request.onsuccess = () => {
+                    console.log('記錄已儲存，ID:', request.result);
+                    resolve(request.result);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 取得所有記錄
         async function getAllRecords() {
             if (!db) {
                 await initDB();
@@ -47,3 +568,160 @@
                 </div>
             </div>
         </div>
+
+        // 顯示成功訊息
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                ${type === 'success' ? 'background: #48bb78;' : 'background: #f56565;'}
+            `;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // 處理記錄輸入
+        function setupRecordInput() {
+            const inputArea = document.querySelector('.input-area');
+            const placeholder = document.querySelector('.input-placeholder');
+            let textarea;
+            
+            inputArea.addEventListener('click', function(e) {
+                if (e.target === inputArea || e.target === placeholder) {
+                    if (!textarea) {
+                        textarea = document.createElement('textarea');
+                        textarea.style.cssText = `
+                            width: 100%;
+                            height: 80px;
+                            border: none;
+                            background: transparent;
+                            resize: none;
+                            outline: none;
+                            font-family: inherit;
+                            font-size: 14px;
+                            line-height: 1.5;
+                            color: #2d3748;
+                        `;
+                        textarea.placeholder = '分享您今天的想法、心得或生活點滴...';
+                        inputArea.insertBefore(textarea, placeholder);
+                        placeholder.style.display = 'none';
+                    }
+                    textarea.focus();
+                }
+            });
+        }
+
+        // 處理按鈕點擊和資料儲存
+        function setupActionButtons() {
+            document.querySelectorAll('.action-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    // 視覺效果
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    // 取得輸入內容
+                    const textarea = document.querySelector('textarea');
+                    const recordText = textarea ? textarea.value.trim() : '';
+                    
+                    if (!recordText) {
+                        showMessage('請輸入記錄內容', 'error');
+                        return;
+                    }
+                    
+                    // 確定日誌類型
+                    let journalType = '';
+                    if (this.textContent.includes('航行日誌')) {
+                        journalType = 'navigation_log';
+                    } else if (this.textContent.includes('觸發型事件')) {
+                        journalType = 'trigger_event';
+                    } else if (this.textContent.includes('日記映射')) {
+                        journalType = 'diary_mapping';
+                    }
+                    
+                    try {
+                        const recordId = await addRecord(recordText, journalType);
+                        showMessage(`記錄已儲存 (ID: ${recordId})`);
+                        
+                        // 清空輸入框
+                        if (textarea) {
+                            textarea.value = '';
+                        }
+                        
+                        // 可選：顯示記錄總數
+                        const allRecords = await getAllRecords();
+                        console.log(`目前共有 ${allRecords.length} 筆記錄`);
+                        
+                    } catch (error) {
+                        console.error('儲存失敗:', error);
+                        showMessage('儲存失敗，請稍後再試', 'error');
+                    }
+                });
+            });
+        }
+
+        function toggleStatus() {
+            const details = document.getElementById('statusDetails');
+            const icon = document.getElementById('toggleIcon');
+            
+            if (details.classList.contains('expanded')) {
+                details.classList.remove('expanded');
+                icon.classList.remove('expanded');
+            } else {
+                details.classList.add('expanded');
+                icon.classList.add('expanded');
+            }
+        }
+
+        // 導航標籤點擊效果
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await initDB();
+                console.log('資料庫初始化成功');
+                
+                setupRecordInput();
+                setupActionButtons();
+                
+                // 顯示現有記錄數量
+                const records = await getAllRecords();
+                console.log(`載入了 ${records.length} 筆現有記錄`);
+                
+            } catch (error) {
+                console.error('初始化失敗:', error);
+                showMessage('應用程式初始化失敗', 'error');
+            }
+        });
+
+        // 添加 CSS 動畫
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
