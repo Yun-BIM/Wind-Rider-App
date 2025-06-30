@@ -333,7 +333,7 @@
         // IndexedDB 資料庫初始化
         let db;
         const DB_NAME = 'WindRiderDB';
-        const DB_VERSION = 4; // 與主頁面和其他 iframe 保持一致
+        const DB_VERSION = 5; // *** 與主頁面和其他 iframe 保持一致 ***
         const STORE_NAME_RECORDS = 'records';
         const STORE_NAME_PROFILE = 'userProfile'; // 確保 userProfile 也被處理
 
@@ -442,9 +442,22 @@
             }
             return new Promise((resolve, reject) => {
                 try {
+                    // 檢查 object store 是否存在
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        console.error('Analyze iframe: getLatestRecord 錯誤 - records 物件儲存不存在。');
+                        showMessage('無法獲取記錄，資料庫結構異常', 'error');
+                        resolve(null); // 返回 null 而不是 reject，讓後續流程可以繼續
+                        return;
+                    }
+
                     const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
+                    tx.onerror = (event) => {
+                        console.error('Analyze iframe: 獲取最新記錄事務錯誤:', event.target.error);
+                        showMessage('獲取最新記錄事務失敗', 'error');
+                        reject(event.target.error);
+                    };
+
                     const store = tx.objectStore(STORE_NAME_RECORDS);
-                    // 使用游標並反向遍歷，以獲取最新記錄
                     const request = store.openCursor(null, 'prev'); 
                     let latestRecord = null;
 
@@ -458,11 +471,11 @@
                         }
                     };
                     request.onerror = (event) => {
-                        console.error('Analyze iframe: 獲取最新記錄失敗:', event.target.error);
+                        console.error('Analyze iframe: 獲取最新記錄請求失敗:', event.target.error);
                         reject(event.target.error);
                     };
                 } catch (e) {
-                    console.error('Analyze iframe: 獲取最新記錄事務或物件儲存操作失敗:', e);
+                    console.error('Analyze iframe: getLatestRecord 事務或物件儲存操作失敗:', e);
                     reject(e);
                 }
             });
@@ -509,7 +522,7 @@
                     console.log('Analyze iframe: 獲取到最新記錄:', latestRecord);
                     
                     // 填充只讀欄位
-                    analysisElements.title.textContent = `關於「${latestRecord.recordText.substring(0, 15)}...」的分析`;
+                    analysisElements.title.textContent = `關於「${latestRecord.recordText.substring(0, Math.min(latestRecord.recordText.length, 15))}...」的分析`;
                     analysisElements.creationTime.textContent = new Date(latestRecord.createdAt).toLocaleString('zh-TW', { hour12: false });
                     
                     const typeMap = {
