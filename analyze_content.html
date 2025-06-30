@@ -8,21 +8,596 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: transparent;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh; /* 讓內容居中顯示 */
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
         }
-        .message {
-            font-size: 20px;
-            color: #718096;
-            text-align: center;
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .analysis-container {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .analysis-group {
+            margin-bottom: 15px;
+        }
+
+        .analysis-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .analysis-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .analysis-value,
+        .editable-input,
+        .editable-textarea,
+        .editable-select {
+            font-size: 14px;
+            color: #2d3748;
+            line-height: 1.6;
+            background: #edf2f7;
+            padding: 10px 12px;
+            border-radius: 8px;
+            min-height: 40px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #edf2f7; /* 預設邊框 */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .editable-input:focus,
+        .editable-textarea:focus,
+        .editable-select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
+        }
+
+        .analysis-placeholder {
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-weight: normal; /* 覆蓋 .analysis-label 的粗體 */
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag-item {
+            background: #cbd5e0;
+            color: #2d3748;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tag-item .remove-tag {
+            cursor: pointer;
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .tag-input {
+            border: 1px solid #cbd5e0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+
+        .original-log-button {
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .original-log-button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .original-log-button:active {
+            transform: scale(0.98);
+        }
+
+        /* 原始日誌彈窗 */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1001; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 15px;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            cursor: pointer;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            max-height: 70vh; /* 限制彈窗內容高度 */
+            overflow-y: auto; /* 內容過長時滾動 */
+            margin-top: 20px;
+            padding-right: 10px; /* 為滾動條留出空間 */
+            white-space: pre-wrap; /* 保留換行和空格 */
+            word-wrap: break-word; /* 長單詞自動換行 */
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        /* 訊息提示框的動畫 CSS */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="message">🧠 分析功能開發中...</div>
+    <h2 class="section-title">分析結果</h2>
+    
+    <div class="analysis-container">
+        <!-- 標題 -->
+        <div class="analysis-group">
+            <div class="analysis-label">標題</div>
+            <div id="analysisTitle" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析語音內容給出的標題...</span>
+            </div>
+        </div>
+
+        <!-- 建檔時間 -->
+        <div class="analysis-group">
+            <div class="analysis-label">建檔時間</div>
+            <div id="creationTime" class="analysis-value">
+                <span class="analysis-placeholder">使用者輸入語音建檔時間...</span>
+            </div>
+        </div>
+
+        <!-- 日誌類型 -->
+        <div class="analysis-group">
+            <div class="analysis-label">日誌類型</div>
+            <div id="journalType" class="analysis-value">
+                <span class="analysis-placeholder">使用者當時選的類型...</span>
+            </div>
+        </div>
+
+        <!-- 語音層級 -->
+        <div class="analysis-group">
+            <div class="analysis-label">語音層級</div>
+            <div id="voiceLevel" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析語音層級 (L0:無意識抒發層 L1:被動反應層 L2:初步覺察層 L3:有選擇層)...</span>
+            </div>
+        </div>
+
+        <!-- 語音分析 -->
+        <div class="analysis-group">
+            <div class="analysis-label">語音分析</div>
+            <div id="voiceAnalysisReason" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析語音層級分層的原因...</span>
+            </div>
+        </div>
+
+        <!-- 標記精華 -->
+        <div class="analysis-group">
+            <div class="analysis-label">標記精華</div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="markAsEssence">
+                <label for="markAsEssence">這篇是否要列為精華</label>
+            </div>
+        </div>
+
+        <!-- 生活面向 (可修改) -->
+        <div class="analysis-group">
+            <div class="analysis-label">生活面向</div>
+            <input type="text" id="lifeAspect" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
+        </div>
+
+        <!-- 情緒標籤 (可修改) -->
+        <div class="analysis-group">
+            <div class="analysis-label">情緒標籤</div>
+            <input type="text" id="emotionTags" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
+        </div>
+
+        <!-- 關鍵句子 -->
+        <div class="analysis-group">
+            <div class="analysis-label">關鍵句子</div>
+            <div id="keySentences" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析自動帶出關鍵句子...</span>
+            </div>
+        </div>
+
+        <!-- 心理構面 (下拉選單) -->
+        <div class="analysis-group">
+            <div class="analysis-label">心理構面</div>
+            <select id="psychologicalConstruct" class="editable-select">
+                <option value="">請選擇</option>
+                <option value="情緒調適">情緒調適</option>
+                <option value="照護修復">照護修復</option>
+                <option value="追尋意義">追尋意義</option>
+                <option value="適應壓力">適應壓力</option>
+                <option value="自我探索">自我探索</option>
+                <option value="建構關係">建構關係</option>
+            </select>
+        </div>
+
+        <!-- 底層信念 -->
+        <div class="analysis-group">
+            <div class="analysis-label">底層信念</div>
+            <div id="underlyingBelief" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析語音內容給出的底層信念...</span>
+            </div>
+        </div>
+
+        <!-- 引導提問 -->
+        <div class="analysis-group">
+            <div class="analysis-label">引導提問</div>
+            <div id="guidedQuestions" class="analysis-value">
+                <span class="analysis-placeholder">AI 自動分析帶出底層信念的提問...</span>
+            </div>
+        </div>
+
+        <!-- 原始日誌按鈕 -->
+        <button id="showOriginalLogBtn" class="original-log-button">原始日誌</button>
+    </div>
+
+    <!-- 原始日誌彈窗 -->
+    <div id="originalLogModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeModalBtn">&times;</span>
+            <h3>原始日誌內容</h3>
+            <div id="modalLogContent" class="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // IndexedDB 資料庫初始化
+        let db;
+        const DB_NAME = 'WindRiderDB';
+        const DB_VERSION = 4; // 與主頁面和其他 iframe 保持一致
+        const STORE_NAME_RECORDS = 'records';
+        const STORE_NAME_PROFILE = 'userProfile'; // 確保 userProfile 也被處理
+
+        /**
+         * 顯示應用程式訊息 (成功或錯誤)。
+         */
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                ${type === 'success' ? 'background: #48bb78;' : 'background: #f56565;'}
+            `;
+            messageDiv.textContent = message;
+            if (window.parent && window.parent.document) {
+                window.parent.document.body.appendChild(messageDiv);
+            } else {
+                document.body.appendChild(messageDiv);
+            }
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        /**
+         * 初始化 IndexedDB 資料庫。
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                console.log('Analyze iframe: 嘗試打開 IndexedDB 資料庫...');
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error('Analyze iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
+                    showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
+                    reject(event.target.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('Analyze iframe: IndexedDB 連接成功，版本:', db.version);
+                    // 檢查必要的 Object Stores 是否存在
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.warn('Analyze iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
+                    }
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    console.log('Analyze iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
+                    
+                    // 創建 records store
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        try {
+                            const recordsStore = db.createObjectStore(STORE_NAME_RECORDS, { keyPath: 'id', autoIncrement: true });
+                            recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
+                            recordsStore.createIndex('journalType', 'journalType', { unique: false });
+                            recordsStore.createIndex('creator', 'creator', { unique: false });
+                            console.log('Analyze iframe: records Object Store 已創建');
+                        } catch (e) {
+                            console.error('Analyze iframe: 創建 records Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建記錄儲存', 'error');
+                            event.preventDefault(); 
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Analyze iframe: records Object Store 已存在 (無需創建)');
+                    }
+
+                    // 創建 userProfile object store
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        try {
+                            const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); 
+                            console.log('Analyze iframe: userProfile Object Store 已創建');
+                        } catch (e) {
+                            console.error('Analyze iframe: 創建 userProfile Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建個人設定儲存', 'error');
+                            event.preventDefault(); 
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Analyze iframe: userProfile Object Store 已存在 (無需創建)');
+                    }
+                };
+            });
+        }
+
+        /**
+         * 獲取最近一筆記錄的內容。
+         * @returns {Promise<Object|null>} Promise 對象，解析為最近一筆記錄的完整物件，如果沒有則為 null。
+         */
+        async function getLatestRecord() {
+            if (!db) {
+                await initDB(); // 確保 DB 已初始化
+            }
+            return new Promise((resolve, reject) => {
+                try {
+                    const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
+                    const store = tx.objectStore(STORE_NAME_RECORDS);
+                    // 使用游標並反向遍歷，以獲取最新記錄
+                    const request = store.openCursor(null, 'prev'); 
+                    let latestRecord = null;
+
+                    request.onsuccess = (event) => {
+                        const cursor = event.target.result;
+                        if (cursor) {
+                            latestRecord = cursor.value;
+                            resolve(latestRecord); // 返回最新記錄的完整物件
+                        } else {
+                            resolve(null); // 沒有記錄
+                        }
+                    };
+                    request.onerror = (event) => {
+                        console.error('Analyze iframe: 獲取最新記錄失敗:', event.target.error);
+                        reject(event.target.error);
+                    };
+                } catch (e) {
+                    console.error('Analyze iframe: 獲取最新記錄事務或物件儲存操作失敗:', e);
+                    reject(e);
+                }
+            });
+        }
+
+        /**
+         * 執行分析並顯示結果。
+         * 這裡僅為範例，實際分析需要後端或 LLM 整合。
+         */
+        async function performAnalysis() {
+            const analysisElements = {
+                title: document.getElementById('analysisTitle'),
+                creationTime: document.getElementById('creationTime'),
+                journalType: document.getElementById('journalType'),
+                voiceLevel: document.getElementById('voiceLevel'),
+                voiceAnalysisReason: document.getElementById('voiceAnalysisReason'),
+                markAsEssence: document.getElementById('markAsEssence'),
+                lifeAspect: document.getElementById('lifeAspect'),
+                emotionTags: document.getElementById('emotionTags'),
+                keySentences: document.getElementById('keySentences'),
+                psychologicalConstruct: document.getElementById('psychologicalConstruct'),
+                underlyingBelief: document.getElementById('underlyingBelief'),
+                guidedQuestions: document.getElementById('guidedQuestions'),
+                modalLogContent: document.getElementById('modalLogContent')
+            };
+
+            // 清空舊內容並顯示載入狀態
+            for (const key in analysisElements) {
+                if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                    analysisElements[key].innerHTML = '<span class="analysis-placeholder">正在分析中...</span>';
+                }
+            }
+            // 清空可編輯欄位
+            analysisElements.lifeAspect.value = '';
+            analysisElements.emotionTags.value = '';
+            analysisElements.psychologicalConstruct.value = '';
+            analysisElements.markAsEssence.checked = false;
+
+
+            try {
+                const latestRecord = await getLatestRecord();
+
+                if (latestRecord) {
+                    console.log('Analyze iframe: 獲取到最新記錄:', latestRecord);
+                    
+                    // 填充只讀欄位
+                    analysisElements.title.textContent = `關於「${latestRecord.recordText.substring(0, 15)}...」的分析`;
+                    analysisElements.creationTime.textContent = new Date(latestRecord.createdAt).toLocaleString('zh-TW', { hour12: false });
+                    
+                    const typeMap = {
+                        navigation_log: '航行日誌',
+                        trigger_event: '觸發型事件記錄',
+                        diary_mapping: '日記映射'
+                    };
+                    analysisElements.journalType.textContent = typeMap[latestRecord.journalType] || latestRecord.journalType;
+
+                    // 模擬 AI 分析結果
+                    const simulatedVoiceLevel = ['L0:無意識抒發層', 'L1:被動反應層', 'L2:初步覺察層', 'L3:有選擇層'][Math.floor(Math.random() * 4)];
+                    analysisElements.voiceLevel.textContent = simulatedVoiceLevel;
+                    analysisElements.voiceAnalysisReason.textContent = `根據內容長度與詞彙頻率，AI 判斷為 ${simulatedVoiceLevel}。`;
+                    
+                    analysisElements.keySentences.textContent = `「${latestRecord.recordText.substring(0, Math.min(latestRecord.recordText.length, 30))}...」是核心句。`;
+                    
+                    const simulatedBelief = ['自我價值', '人際連結', '成長潛力', '安全感'][Math.floor(Math.random() * 4)];
+                    analysisElements.underlyingBelief.textContent = `這段日誌可能反映了您對「${simulatedBelief}」的底層信念。`;
+                    analysisElements.guidedQuestions.textContent = `關於「${simulatedBelief}」，您可以思考：這對您意味著什麼？如何進一步探索？`;
+
+                    // 填充可編輯欄位（預設值）
+                    analysisElements.lifeAspect.value = '個人成長、情緒管理';
+                    analysisElements.emotionTags.value = '平靜、反思';
+                    analysisElements.psychologicalConstruct.value = '自我探索'; // 預設選擇
+
+                    // 原始日誌內容
+                    analysisElements.modalLogContent.textContent = latestRecord.recordText;
+
+                } else {
+                    // 沒有記錄時的顯示
+                    for (const key in analysisElements) {
+                        if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                            analysisElements[key].textContent = '尚無記錄可供分析。';
+                        }
+                    }
+                    analysisElements.lifeAspect.value = '';
+                    analysisElements.emotionTags.value = '';
+                    analysisElements.psychologicalConstruct.value = '';
+                    analysisElements.markAsEssence.checked = false;
+                    analysisElements.modalLogContent.textContent = '尚無記錄。';
+                    showMessage('尚無記錄可供分析。', 'info');
+                }
+            } catch (error) {
+                console.error('Analyze iframe: 執行分析失敗:', error);
+                showMessage('分析失敗，請稍後再試', 'error');
+                // 錯誤時清空並顯示錯誤訊息
+                for (const key in analysisElements) {
+                    if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                        analysisElements[key].textContent = '分析失敗。';
+                    }
+                }
+                analysisElements.lifeAspect.value = '';
+                analysisElements.emotionTags.value = '';
+                analysisElements.psychologicalConstruct.value = '';
+                analysisElements.markAsEssence.checked = false;
+                analysisElements.modalLogContent.textContent = '分析失敗。';
+            }
+        }
+
+        // 原始日誌彈窗邏輯
+        document.getElementById('showOriginalLogBtn').addEventListener('click', function() {
+            document.getElementById('originalLogModal').style.display = 'flex'; // 使用 flex 居中
+        });
+
+        document.getElementById('closeModalBtn').addEventListener('click', function() {
+            document.getElementById('originalLogModal').style.display = 'none';
+        });
+
+        // 點擊彈窗外部關閉
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('originalLogModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // 頁面載入時初始化並執行分析
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Analyze iframe: DOMContentLoaded 觸發。');
+            try {
+                await initDB();
+                await performAnalysis(); // 頁面載入時立即執行分析
+                console.log('Analyze iframe: 頁面初始化完成並執行分析。');
+            } catch (error) {
+                console.error('Analyze iframe: 初始化或分析失敗:', error);
+                showMessage('分析頁面初始化失敗，請檢查瀏覽器控制台', 'error');
+            }
+        });
+    </script>
 </body>
 </html>
