@@ -321,6 +321,261 @@
             background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
             color: #4a5568;
         }
+        .coming-soon {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .coming-soon-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .coming-soon p {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .coming-soon small {
+            font-size: 14px;
+        }
+
+        /* 頁面切換 */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* 歷史記錄樣式 */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .history-stats {
+            font-size: 14px;
+            color: #718096;
+            background: #f7fafc;
+            padding: 8px 16px;
+            border-radius: 20px;
+        }
+
+        .search-section {
+            margin-bottom: 20px;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 15px 50px 15px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-bar input:focus {
+            border-color: #667eea;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a0aec0;
+            font-size: 18px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            border: none;
+            background: #f7fafc;
+            color: #718096;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+
+        .filter-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .records-container {
+            margin-bottom: 30px;
+        }
+
+        .records-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .record-item {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .record-item:hover {
+            background: #edf2f7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .record-type {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .record-type.navigation_log {
+            color: #667eea;
+        }
+
+        .record-type.trigger_event {
+            color: #f6ad55;
+        }
+
+        .record-type.diary_mapping {
+            color: #68d391;
+        }
+
+        .record-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .record-action {
+            width: 32px;
+            height: 32px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .record-action.delete {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+
+        .record-action.delete:hover {
+            background: #feb2b2;
+        }
+
+        .record-content {
+            color: #2d3748;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            word-wrap: break-word;
+        }
+
+        .record-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        .record-date {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .record-id {
+            font-family: monospace;
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .no-records {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .no-records-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .no-records p {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .no-records small {
+            font-size: 14px;
+        }
+
+        .export-section {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        .export-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #38b2ac, #319795);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .export-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56, 178, 172, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -432,25 +687,92 @@
 
         <!-- 內容區域 -->
         <div class="content">
-            <h2 class="section-title">新增記錄</h2>
-            
-            <div class="input-area">
-                <div class="input-placeholder">分享您今天的想法、心得或生活點滴...</div>
-                <div class="voice-button">🎤</div>
+            <!-- 新增記錄頁面 -->
+            <div id="recordPage" class="page active">
+                <h2 class="section-title">新增記錄</h2>
+                
+                <div class="input-area">
+                    <div class="input-placeholder">分享您今天的想法、心得或生活點滴...</div>
+                    <div class="voice-button">🎤</div>
+                </div>
+
+                <div class="action-buttons">
+                    <div class="action-button primary">
+                        <span>⛵</span>
+                        航行日誌
+                    </div>
+                    <div class="action-button secondary">
+                        <span>⚡</span>
+                        觸發型事件記錄
+                    </div>
+                    <div class="action-button tertiary">
+                        <span>🎯</span>
+                        日記映射
+                    </div>
+                </div>
             </div>
 
-            <div class="action-buttons">
-                <div class="action-button primary">
-                    <span>⛵</span>
-                    航行日誌
+            <!-- 歷史記錄頁面 -->
+            <div id="historyPage" class="page">
+                <div class="history-header">
+                    <h2 class="section-title">歷史記錄</h2>
+                    <div class="history-stats">
+                        <span id="recordCount">載入中...</span>
+                    </div>
                 </div>
-                <div class="action-button secondary">
-                    <span>⚡</span>
-                    觸發型事件記錄
+
+                <!-- 搜尋和篩選 -->
+                <div class="search-section">
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="搜尋記錄內容...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-type="all">全部</button>
+                        <button class="filter-tab" data-type="navigation_log">航行日誌</button>
+                        <button class="filter-tab" data-type="trigger_event">觸發事件</button>
+                        <button class="filter-tab" data-type="diary_mapping">日記映射</button>
+                    </div>
                 </div>
-                <div class="action-button tertiary">
-                    <span>🎯</span>
-                    日記映射
+
+                <!-- 記錄列表 -->
+                <div class="records-container">
+                    <div id="recordsList" class="records-list">
+                        <!-- 記錄項目將動態載入 -->
+                    </div>
+                    <div id="noRecords" class="no-records" style="display: none;">
+                        <div class="no-records-icon">📝</div>
+                        <p>還沒有記錄</p>
+                        <small>開始記錄你的人生航程吧！</small>
+                    </div>
+                </div>
+
+                <!-- 匯出按鈕 -->
+                <div class="export-section">
+                    <button class="export-button" onclick="exportData()">
+                        <span>📤</span>
+                        匯出資料
+                    </button>
+                </div>
+            </div>
+
+            <!-- 分析頁面佔位 -->
+            <div id="analysisPage" class="page">
+                <h2 class="section-title">分析</h2>
+                <div class="coming-soon">
+                    <div class="coming-soon-icon">🧠</div>
+                    <p>智能分析功能</p>
+                    <small>即將推出...</small>
+                </div>
+            </div>
+
+            <!-- 統計頁面佔位 -->
+            <div id="statsPage" class="page">
+                <h2 class="section-title">統計</h2>
+                <div class="coming-soon">
+                    <div class="coming-soon-icon">📊</div>
+                    <p>統計圖表功能</p>
+                    <small>即將推出...</small>
                 </div>
             </div>
         </div>
@@ -519,19 +841,193 @@
             });
         }
 
-        // 取得所有記錄
-        async function getAllRecords() {
+        // 刪除記錄
+        async function deleteRecord(id) {
+            if (!confirm('確定要刪除這筆記錄嗎？')) {
+                return;
+            }
+            
             if (!db) {
                 await initDB();
             }
             
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
                 const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
+                const request = store.delete(id);
                 
-                request.onsuccess = () => resolve(request.result);
+                request.onsuccess = () => {
+                    console.log('記錄已刪除，ID:', id);
+                    resolve();
+                };
                 request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 匯出資料
+        async function exportData() {
+            try {
+                const records = await getAllRecords();
+                const dataStr = JSON.stringify(records, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `wind-rider-data-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                
+                showMessage('資料匯出成功');
+            } catch (error) {
+                console.error('匯出失敗:', error);
+                showMessage('匯出失敗', 'error');
+            }
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffTime = Math.abs(now - date);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                return `今天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (diffDays === 1) {
+                return `昨天 ${date.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+            } else if (diffDays < 7) {
+                return `${diffDays}天前`;
+            } else {
+                return date.toLocaleDateString('zh-TW');
+            }
+        }
+
+        // 取得日誌類型顯示名稱
+        function getJournalTypeName(type) {
+            const typeMap = {
+                'navigation_log': { name: '航行日誌', icon: '⛵' },
+                'trigger_event': { name: '觸發事件', icon: '⚡' },
+                'diary_mapping': { name: '日記映射', icon: '🎯' }
+            };
+            return typeMap[type] || { name: '未知類型', icon: '📝' };
+        }
+
+        // 渲染記錄列表
+        async function renderRecords(searchTerm = '', filterType = 'all') {
+            try {
+                const allRecords = await getAllRecords();
+                
+                // 篩選記錄
+                let filteredRecords = allRecords.filter(record => {
+                    const matchesSearch = !searchTerm || 
+                        record.recordText.toLowerCase().includes(searchTerm.toLowerCase());
+                    const matchesType = filterType === 'all' || record.journalType === filterType;
+                    return matchesSearch && matchesType;
+                });
+                
+                // 按日期排序（最新的在前）
+                filteredRecords.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                const recordsList = document.getElementById('recordsList');
+                const noRecords = document.getElementById('noRecords');
+                const recordCount = document.getElementById('recordCount');
+                
+                // 更新記錄數量
+                recordCount.textContent = `共 ${allRecords.length} 筆記錄`;
+                
+                if (filteredRecords.length === 0) {
+                    recordsList.style.display = 'none';
+                    noRecords.style.display = 'block';
+                    noRecords.querySelector('p').textContent = searchTerm || filterType !== 'all' 
+                        ? '沒有符合條件的記錄' 
+                        : '還沒有記錄';
+                } else {
+                    recordsList.style.display = 'block';
+                    noRecords.style.display = 'none';
+                    
+                    recordsList.innerHTML = filteredRecords.map(record => {
+                        const typeInfo = getJournalTypeName(record.journalType);
+                        return `
+                            <div class="record-item">
+                                <div class="record-header">
+                                    <div class="record-type ${record.journalType}">
+                                        <span>${typeInfo.icon}</span>
+                                        ${typeInfo.name}
+                                    </div>
+                                    <div class="record-actions">
+                                        <button class="record-action delete" onclick="handleDeleteRecord(${record.id})" title="刪除">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="record-content">${record.recordText}</div>
+                                <div class="record-meta">
+                                    <div class="record-date">
+                                        <span>📅</span>
+                                        ${formatDate(record.createdAt)}
+                                    </div>
+                                    <div class="record-id">ID: ${record.id}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                console.error('載入記錄失敗:', error);
+                showMessage('載入記錄失敗', 'error');
+            }
+        }
+
+        // 處理刪除記錄
+        async function handleDeleteRecord(id) {
+            try {
+                await deleteRecord(id);
+                showMessage('記錄已刪除');
+                await renderRecords();
+            } catch (error) {
+                console.error('刪除失敗:', error);
+                showMessage('刪除失敗', 'error');
+            }
+        }
+
+        // 頁面切換功能
+        function switchPage(pageId) {
+            // 隱藏所有頁面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // 顯示目標頁面
+            document.getElementById(pageId).classList.add('active');
+            
+            // 如果切換到歷史頁面，載入記錄
+            if (pageId === 'historyPage') {
+                renderRecords();
+            }
+        }
+
+        // 設置搜尋和篩選功能
+        function setupHistoryFeatures() {
+            const searchInput = document.getElementById('searchInput');
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            
+            let currentFilter = 'all';
+            
+            // 搜尋功能
+            searchInput.addEventListener('input', (e) => {
+                renderRecords(e.target.value, currentFilter);
+            });
+            
+            // 篩選功能
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // 更新按鈕狀態
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // 更新篩選器並重新渲染
+                    currentFilter = tab.dataset.type;
+                    renderRecords(searchInput.value, currentFilter);
+                });
             });
         }
 
@@ -653,10 +1149,14 @@
         }
 
         // 導航標籤點擊效果
-        document.querySelectorAll('.nav-tab').forEach(tab => {
+        document.querySelectorAll('.nav-tab').forEach((tab, index) => {
             tab.addEventListener('click', function() {
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
+                
+                // 根據點擊的標籤切換頁面
+                const pages = ['recordPage', 'analysisPage', 'historyPage', 'statsPage'];
+                switchPage(pages[index]);
             });
         });
 
@@ -668,6 +1168,7 @@
                 
                 setupRecordInput();
                 setupActionButtons();
+                setupHistoryFeatures();
                 
                 // 顯示現有記錄數量
                 const records = await getAllRecords();
