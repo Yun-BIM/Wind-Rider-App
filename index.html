@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>人生航行 Wind Rider</title>
     <style>
+        /* 基本樣式重置 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        /* 頁面背景和字體 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -18,6 +20,7 @@
             padding: 20px;
         }
 
+        /* 主容器樣式 */
         .container {
             max-width: 400px;
             margin: 0 auto;
@@ -27,6 +30,7 @@
             overflow: hidden;
         }
 
+        /* 標題區域樣式 */
         .header {
             padding: 30px;
             text-align: left;
@@ -114,7 +118,7 @@
         }
 
         .status-details.expanded {
-            max-height: 500px;
+            max-height: 500px; /* 展開時的最大高度 */
         }
 
         .detail-section {
@@ -202,7 +206,7 @@
             color: #4a5568;
         }
 
-        /* 原有的導航和內容區域 */
+        /* 導航和內容區域 */
         .nav-tabs {
             display: flex;
             padding: 0 30px;
@@ -256,7 +260,7 @@
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid #e2e8f0;
-            min-height: 120px;
+            min-height: 120px; /* 增加最小高度以容納文本區域 */
             position: relative;
         }
 
@@ -265,7 +269,22 @@
             position: absolute;
             top: 20px;
             left: 20px;
-            pointer-events: none;
+            pointer-events: none; /* 讓點擊穿透到下面的 textarea */
+        }
+        
+        .input-area textarea {
+            width: 100%;
+            height: 80px; /* 預設高度，可根據內容自動調整 */
+            border: none;
+            background: transparent;
+            resize: none; /* 禁止用戶手動調整大小 */
+            outline: none;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #2d3748;
+            padding: 0; /* 移除預設 padding */
+            margin-top: 0; /* 確保頂部沒有額外空間 */
         }
 
         .voice-button {
@@ -324,7 +343,7 @@
 
         /* 歷史記錄面板 */
         .history-panel {
-            display: none;
+            display: none; /* 預設隱藏 */
             margin-top: 20px;
             background: #f7fafc;
             border-radius: 12px;
@@ -342,6 +361,21 @@
 
         .history-item:last-child {
             border-bottom: none;
+        }
+
+        .history-item-date {
+            font-size: 12px;
+            color: #718096;
+            margin-bottom: 4px;
+        }
+
+        .history-item-type {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .history-item-content {
+            color: #4a5568;
         }
     </style>
 </head>
@@ -457,6 +491,7 @@
             <h2 class="section-title">新增記錄</h2>
             
             <div class="input-area">
+                <!-- 初始的 placeholder，點擊後會替換為 textarea -->
                 <div class="input-placeholder">分享您今天的想法、心得或生活點滴...</div>
                 <div class="voice-button">🎤</div>
             </div>
@@ -476,6 +511,7 @@
                 </div>
             </div>
             
+            <!-- 歷史記錄面板，預設隱藏 -->
             <div id="historyPanel" class="history-panel"></div>
         </div>
     </div>
@@ -487,76 +523,124 @@
         const DB_VERSION = 1;
         const STORE_NAME = 'records';
 
-        // 初始化資料庫
+        /**
+         * 初始化 IndexedDB 資料庫。
+         * 如果資料庫不存在或版本升級，則會創建或更新 object store 及索引。
+         * @returns {Promise<IDBDatabase>} Promise 對象，成功時解析為資料庫實例。
+         */
         function initDB() {
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
                 
-                request.onerror = () => reject(request.error);
+                request.onerror = () => {
+                    console.error('IndexedDB 打開失敗:', request.error);
+                    reject(request.error);
+                };
                 request.onsuccess = () => {
                     db = request.result;
+                    console.log('IndexedDB 連接成功');
                     resolve(db);
                 };
                 
                 request.onupgradeneeded = (event) => {
                     db = event.target.result;
+                    console.log('IndexedDB 正在升級/創建資料庫...');
                     
                     // 創建記錄主檔表
                     if (!db.objectStoreNames.contains(STORE_NAME)) {
                         const store = db.createObjectStore(STORE_NAME, { 
-                            keyPath: 'id', 
-                            autoIncrement: true 
+                            keyPath: 'id', // 設定主鍵
+                            autoIncrement: true // 自動遞增 ID
                         });
                         
-                        // 創建索引
-                        store.createIndex('createdAt', 'createdAt', { unique: false });
-                        store.createIndex('journalType', 'journalType', { unique: false });
-                        store.createIndex('creator', 'creator', { unique: false });
+                        // 創建索引，以便快速查詢和排序
+                        store.createIndex('createdAt', 'createdAt', { unique: false }); // 依建立時間排序
+                        store.createIndex('journalType', 'journalType', { unique: false }); // 依日誌類型查詢
+                        store.createIndex('creator', 'creator', { unique: false }); // 依建立者查詢
+                        console.log(`Object Store '${STORE_NAME}' 已創建並建立索引`);
                     }
                 };
             });
         }
 
+        /**
+         * 從 IndexedDB 獲取所有記錄。
+         * @returns {Promise<Array<Object>>} Promise 對象，解析為記錄陣列。
+         */
         async function getAllRecords() {
+            // 確保資料庫已初始化
             if (!db) {
-                await initDB();
+                try {
+                    await initDB();
+                } catch (error) {
+                    console.error('獲取記錄前資料庫初始化失敗:', error);
+                    showMessage('無法獲取記錄，應用程式初始化失敗', 'error');
+                    return []; // 返回空陣列以避免後續錯誤
+                }
             }
+
             return new Promise((resolve, reject) => {
-                const tx = db.transaction([STORE_NAME], 'readonly');
+                const tx = db.transaction([STORE_NAME], 'readonly'); // 讀取模式的交易
                 const store = tx.objectStore(STORE_NAME);
-                const request = store.getAll();
-                request.onsuccess = () => resolve(request.result || []);
-                request.onerror = () => reject(request.error);
+                const request = store.getAll(); // 獲取所有記錄
+
+                request.onsuccess = () => {
+                    console.log('所有記錄獲取成功:', request.result);
+                    resolve(request.result || []); // 如果沒有記錄則返回空陣列
+                };
+                request.onerror = () => {
+                    console.error('獲取所有記錄失敗:', request.error);
+                    reject(request.error);
+                };
             });
         }
 
-        // 新增記錄
+        /**
+         * 向 IndexedDB 新增一條記錄。
+         * @param {string} recordText - 記錄的內容。
+         * @param {string} journalType - 日誌的類型（'navigation_log', 'trigger_event', 'diary_mapping'）。
+         * @returns {Promise<number>} Promise 對象，解析為新增記錄的 ID。
+         */
         async function addRecord(recordText, journalType) {
+            // 確保資料庫已初始化
             if (!db) {
-                await initDB();
+                try {
+                    await initDB();
+                } catch (error) {
+                    console.error('新增記錄前資料庫初始化失敗:', error);
+                    showMessage('無法儲存記錄，應用程式初始化失敗', 'error');
+                    throw error; // 拋出錯誤以便調用者捕獲
+                }
             }
             
             const record = {
                 recordText: recordText,
                 journalType: journalType,
-                createdAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(), // 使用 ISO 格式儲存時間，便於排序和解析
                 creator: 'Anna' // 目前使用固定值，未來可從使用者狀態取得
             };
             
             return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const transaction = db.transaction([STORE_NAME], 'readwrite'); // 讀寫模式的交易
                 const store = transaction.objectStore(STORE_NAME);
-                const request = store.add(record);
+                const request = store.add(record); // 新增記錄
                 
                 request.onsuccess = () => {
                     console.log('記錄已儲存，ID:', request.result);
                     resolve(request.result);
                 };
-                request.onerror = () => reject(request.error);
+                request.onerror = () => {
+                    console.error('新增記錄失敗:', request.error);
+                    reject(request.error);
+                };
             });
         }
 
-        // 顯示成功訊息
+        /**
+         * 顯示應用程式訊息 (成功或錯誤)。
+         * @param {string} message - 要顯示的訊息內容。
+         * @param {string} type - 訊息類型 ('success' 或 'error')。
+         */
         function showMessage(message, type = 'success') {
             const messageDiv = document.createElement('div');
             messageDiv.style.cssText = `
@@ -575,53 +659,61 @@
             document.body.appendChild(messageDiv);
             
             setTimeout(() => {
-                messageDiv.remove();
+                messageDiv.remove(); // 3 秒後移除訊息
             }, 3000);
         }
 
-        // 處理記錄輸入
+        /**
+         * 設定記錄輸入區塊的行為，點擊後顯示 textarea。
+         */
         function setupRecordInput() {
             const inputArea = document.querySelector('.input-area');
             const placeholder = document.querySelector('.input-placeholder');
-            let textarea;
+            let textarea; // 用於儲存創建的 textarea 元素
+
+            // 初始時創建 textarea 並隱藏 placeholder
+            textarea = document.createElement('textarea');
+            textarea.style.cssText = `
+                width: 100%;
+                height: 80px;
+                border: none;
+                background: transparent;
+                resize: none;
+                outline: none;
+                font-family: inherit;
+                font-size: 14px;
+                line-height: 1.5;
+                color: #2d3748;
+                padding: 0;
+                margin-top: 0;
+            `;
+            textarea.placeholder = '分享您今天的想法、心得或生活點滴...';
+            inputArea.insertBefore(textarea, placeholder); // 將 textarea 插入到 placeholder 之前
+            placeholder.style.display = 'none'; // 預設隱藏 placeholder，直接顯示 textarea
             
+            // 讓 textarea 在 inputArea 載入時就存在並可輸入
+            // 由於直接顯示 textarea，這個事件監聽器現在主要用於確保焦點
             inputArea.addEventListener('click', function(e) {
-                if (e.target === inputArea || e.target === placeholder) {
-                    if (!textarea) {
-                        textarea = document.createElement('textarea');
-                        textarea.style.cssText = `
-                            width: 100%;
-                            height: 80px;
-                            border: none;
-                            background: transparent;
-                            resize: none;
-                            outline: none;
-                            font-family: inherit;
-                            font-size: 14px;
-                            line-height: 1.5;
-                            color: #2d3748;
-                        `;
-                        textarea.placeholder = '分享您今天的想法、心得或生活點滴...';
-                        inputArea.insertBefore(textarea, placeholder);
-                        placeholder.style.display = 'none';
-                    }
+                if (e.target === inputArea || e.target === placeholder || e.target === textarea) {
                     textarea.focus();
                 }
             });
         }
 
-        // 處理按鈕點擊和資料儲存
+        /**
+         * 設定記錄按鈕的點擊事件，處理記錄儲存邏輯。
+         */
         function setupActionButtons() {
             document.querySelectorAll('.action-button').forEach(button => {
                 button.addEventListener('click', async function() {
-                    // 視覺效果
+                    // 視覺效果：按鈕點擊動畫
                     this.style.transform = 'scale(0.95)';
                     setTimeout(() => {
                         this.style.transform = 'scale(1)';
                     }, 150);
                     
                     // 取得輸入內容
-                    const textarea = document.querySelector('textarea');
+                    const textarea = document.querySelector('.input-area textarea');
                     const recordText = textarea ? textarea.value.trim() : '';
                     
                     if (!recordText) {
@@ -648,7 +740,7 @@
                             textarea.value = '';
                         }
                         
-                        // 可選：顯示記錄總數
+                        // 可選：顯示記錄總數（用於調試）
                         const allRecords = await getAllRecords();
                         console.log(`目前共有 ${allRecords.length} 筆記錄`);
                         
@@ -660,6 +752,9 @@
             });
         }
 
+        /**
+         * 切換使用者狀態欄的展開/收合狀態。
+         */
         function toggleStatus() {
             const details = document.getElementById('statusDetails');
             const icon = document.getElementById('toggleIcon');
@@ -673,45 +768,99 @@
             }
         }
 
-        // 顯示最近五筆歷史記錄
+        /**
+         * 顯示最近五筆歷史記錄到歷史面板。
+         * 包含建立時間、日誌類型和內容摘要。
+         */
         async function showHistory() {
             const panel = document.getElementById('historyPanel');
-            const records = await getAllRecords();
-            records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            const latest = records.slice(0, 5);
-            panel.innerHTML = '';
+            panel.innerHTML = ''; // 清空舊內容
+            panel.style.display = 'block'; // 顯示歷史面板
 
-            if (latest.length === 0) {
-                panel.textContent = '尚無記錄';
-            } else {
-                const typeMap = {
-                    navigation_log: '航行日誌',
-                    trigger_event: '觸發型事件',
-                    diary_mapping: '日記映射'
-                };
+            try {
+                const records = await getAllRecords();
+                // 根據 createdAt 降序排序，最新的在前
+                records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                const latestFive = records.slice(0, 5); // 取出最新的五筆
 
-                latest.forEach(r => {
-                    const item = document.createElement('div');
-                    item.className = 'history-item';
-                    const dateStr = new Date(r.createdAt).toLocaleString('zh-TW', { hour12: false });
-                    const text = r.recordText.slice(0, 20);
-                    item.innerHTML = `<div>${dateStr}｜${typeMap[r.journalType] || r.journalType}</div><div>${text}</div>`;
-                    panel.appendChild(item);
-                });
+                if (latestFive.length === 0) {
+                    const noRecordDiv = document.createElement('div');
+                    noRecordDiv.className = 'history-item'; // 沿用 history-item 的樣式
+                    noRecordDiv.textContent = '尚無記錄';
+                    noRecordDiv.style.textAlign = 'center';
+                    noRecordDiv.style.color = '#718096';
+                    panel.appendChild(noRecordDiv);
+                } else {
+                    // 定義日誌類型與顯示名稱的映射
+                    const typeMap = {
+                        navigation_log: '航行日誌',
+                        trigger_event: '觸發型事件記錄',
+                        diary_mapping: '日記映射'
+                    };
+
+                    latestFive.forEach(r => {
+                        const item = document.createElement('div');
+                        item.className = 'history-item';
+
+                        // 格式化建立時間
+                        const dateObj = new Date(r.createdAt);
+                        const dateStr = dateObj.toLocaleString('zh-TW', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit', 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit',
+                            hour12: false // 24 小時制
+                        });
+
+                        // 截斷內容至 20 個中文字
+                        const contentAbstract = r.recordText.length > 20 
+                            ? r.recordText.substring(0, 20) + '...' 
+                            : r.recordText;
+
+                        item.innerHTML = `
+                            <div class="history-item-date">${dateStr}</div>
+                            <div class="history-item-type">${typeMap[r.journalType] || r.journalType}</div>
+                            <div class="history-item-content">${contentAbstract}</div>
+                        `;
+                        panel.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('顯示歷史記錄失敗:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'history-item';
+                errorDiv.style.color = '#f56565';
+                errorDiv.textContent = '載入歷史記錄時發生錯誤。';
+                panel.appendChild(errorDiv);
             }
-
-            panel.style.display = 'block';
         }
 
         // 導航標籤點擊效果
         document.querySelectorAll('.nav-tab').forEach(tab => {
             tab.addEventListener('click', async function() {
+                // 移除所有 tab 的 active 狀態
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                // 為當前點擊的 tab 添加 active 狀態
                 this.classList.add('active');
 
+                // 根據點擊的 tab 顯示/隱藏對應內容
                 if (this.id === 'historyTab') {
-                    await showHistory();
+                    document.querySelector('.section-title').textContent = '歷史記錄';
+                    document.querySelector('.input-area').style.display = 'none';
+                    document.querySelector('.action-buttons').style.display = 'none';
+                    await showHistory(); // 顯示歷史記錄
+                } else if (this.id === 'recordTab') {
+                    document.querySelector('.section-title').textContent = '新增記錄';
+                    document.querySelector('.input-area').style.display = 'block';
+                    document.querySelector('.action-buttons').style.display = 'flex';
+                    document.getElementById('historyPanel').style.display = 'none'; // 隱藏歷史面板
                 } else {
+                    // 對於其他 tab，目前只隱藏歷史面板和顯示記錄相關元素
+                    document.querySelector('.section-title').textContent = '功能開發中...'; // 預留其他功能標題
+                    document.querySelector('.input-area').style.display = 'none';
+                    document.querySelector('.action-buttons').style.display = 'none';
                     document.getElementById('historyPanel').style.display = 'none';
                 }
             });
@@ -723,20 +872,20 @@
                 await initDB();
                 console.log('資料庫初始化成功');
                 
-                setupRecordInput();
-                setupActionButtons();
+                setupRecordInput(); // 設定輸入區域
+                setupActionButtons(); // 設定按鈕行為
                 
-                // 顯示現有記錄數量
+                // 應用程式初始化完成後，可以選擇是否顯示現有記錄數量
                 const records = await getAllRecords();
                 console.log(`載入了 ${records.length} 筆現有記錄`);
                 
             } catch (error) {
-                console.error('初始化失敗:', error);
-                showMessage('應用程式初始化失敗', 'error');
+                console.error('應用程式初始化失敗:', error);
+                showMessage('應用程式初始化失敗，請檢查瀏覽器控制台', 'error');
             }
         });
 
-        // 添加 CSS 動畫
+        // 添加 CSS 動畫（用於訊息提示框）
         const style = document.createElement('style');
         style.textContent = `
             @keyframes slideIn {
