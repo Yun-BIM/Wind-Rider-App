@@ -321,6 +321,28 @@
             background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
             color: #4a5568;
         }
+
+        /* 歷史記錄面板 */
+        .history-panel {
+            display: none;
+            margin-top: 20px;
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .history-item {
+            padding: 10px 5px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #2d3748;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -412,7 +434,7 @@
 
         <!-- 導航標籤 -->
         <div class="nav-tabs">
-            <div class="nav-tab active">
+            <div class="nav-tab active" id="recordTab">
                 <span>➕</span>
                 記錄
             </div>
@@ -420,7 +442,7 @@
                 <span>🧠</span>
                 分析
             </div>
-            <div class="nav-tab">
+            <div class="nav-tab" id="historyTab">
                 <span>📋</span>
                 歷史
             </div>
@@ -453,6 +475,8 @@
                     日記映射
                 </div>
             </div>
+            
+            <div id="historyPanel" class="history-panel"></div>
         </div>
     </div>
 
@@ -649,11 +673,47 @@
             }
         }
 
+     // 顯示最近五筆歷史記錄
+        async function showHistory() {
+            const panel = document.getElementById('historyPanel');
+            const records = await getAllRecords();
+            records.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const latest = records.slice(0, 5);
+            panel.innerHTML = '';
+
+            if (latest.length === 0) {
+                panel.textContent = '尚無記錄';
+            } else {
+                const typeMap = {
+                    navigation_log: '航行日誌',
+                    trigger_event: '觸發型事件',
+                    diary_mapping: '日記映射'
+                };
+
+                latest.forEach(r => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    const dateStr = new Date(r.createdAt).toLocaleString('zh-TW', { hour12: false });
+                    const text = r.recordText.slice(0, 20);
+                    item.innerHTML = `<div>${dateStr}｜${typeMap[r.journalType] || r.journalType}</div><div>${text}</div>`;
+                    panel.appendChild(item);
+                });
+            }
+
+            panel.style.display = 'block';
+        }
+
         // 導航標籤點擊效果
         document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', function() {
+            tab.addEventListener('click', async function() {
                 document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
+
+                if (this.id === 'historyTab') {
+                    await showHistory();
+                } else {
+                    document.getElementById('historyPanel').style.display = 'none';
+                }
             });
         });
 
