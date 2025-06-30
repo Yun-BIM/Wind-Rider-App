@@ -493,6 +493,19 @@
             });
         }
 
+        async function getAllRecords() {
+            if (!db) {
+                await initDB();
+            }
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_NAME], 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result || []);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
         // 新增記錄
         async function addRecord(recordText, journalType) {
             if (!db) {
@@ -515,22 +528,6 @@
                     console.log('記錄已儲存，ID:', request.result);
                     resolve(request.result);
                 };
-                request.onerror = () => reject(request.error);
-            });
-        }
-
-        // 取得所有記錄
-        async function getAllRecords() {
-            if (!db) {
-                await initDB();
-            }
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                
-                request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             });
         }
