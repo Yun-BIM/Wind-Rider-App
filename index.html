@@ -278,8 +278,8 @@
                 <div class="status-main">
                     <div class="avatar">A</div>
                     <div class="status-info">
-                        <h3>掌舵者：Anna</h3>
-                        <p>航行層級：第一層｜CI｜靠近自己</p>
+                        <h3 id="userNameDisplay">掌舵者：Anna</h3>
+                        <p id="userStageDisplay">航行層級：第一層｜CI｜靠近自己</p>
                     </div>
                 </div>
                 <div class="toggle-icon" id="toggleIcon">▼</div>
@@ -382,6 +382,12 @@
     </div>
 
     <script>
+        // IndexedDB 相關常數，用於主頁面初始化時讀取用戶資料
+        const DB_NAME = 'WindRiderDB';
+        const DB_VERSION = 4; // 與 profile_content.html 保持一致
+        const STORE_NAME_PROFILE = 'userProfile';
+        const PROFILE_ID = 1;
+
         /**
          * 切換使用者狀態欄的展開/收合狀態。
          */
@@ -398,50 +404,117 @@
             }
         }
 
+        /**
+         * 更新主頁面使用者狀態欄的顯示。
+         * @param {Object} profileData - 包含使用者匿稱和航行層級的物件。
+         */
+        function updateUserProfileDisplay(profileData) {
+            const avatar = document.querySelector('.user-status .avatar');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            const userStageDisplay = document.getElementById('userStageDisplay');
+
+            if (profileData && profileData.nickname) {
+                userNameDisplay.textContent = `掌舵者：${profileData.nickname}`;
+                avatar.textContent = profileData.nickname.charAt(0).toUpperCase(); // 顯示匿稱第一個字母
+            }
+            if (profileData && profileData.involvementStage) {
+                userStageDisplay.textContent = `航行層級：${profileData.involvementStage}`;
+            }
+        }
+
+        /**
+         * 根據目標頁籤 ID 切換 iframe 內容並更新導航欄。
+         * @param {string} targetTabId - 目標頁籤的 ID (例如 'analyzeTab', 'recordTab')。
+         */
+        function switchTab(targetTabId) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            const targetTabElement = document.getElementById(targetTabId);
+            if (targetTabElement) {
+                targetTabElement.classList.add('active');
+            }
+
+            const contentIframe = document.getElementById('contentIframe');
+            let newSrc = '';
+
+            switch (targetTabId) {
+                case 'recordTab':
+                    newSrc = 'record_content.html';
+                    break;
+                case 'analyzeTab':
+                    newSrc = 'analyze_content.html';
+                    break;
+                case 'historyTab':
+                    newSrc = 'history_content.html';
+                    break;
+                case 'statsTab':
+                    newSrc = 'stats_content.html';
+                    break;
+                case 'profileTab':
+                    newSrc = 'profile_content.html';
+                    break;
+                default:
+                    newSrc = 'record_content.html'; // 預設回到記錄頁
+            }
+            
+            if (contentIframe.src.endsWith(newSrc)) {
+                // 如果點擊當前頁籤，強制重新載入 iframe 內容以刷新
+                contentIframe.contentWindow.location.reload(true);
+            } else {
+                contentIframe.src = newSrc;
+            }
+        }
+
         // 導航標籤點擊效果 - 改變 iframe 的 src
         document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', async function() {
-                // 移除所有 tab 的 active 狀態
-                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-                // 為當前點擊的 tab 添加 active 狀態
-                this.classList.add('active');
-
-                const contentIframe = document.getElementById('contentIframe');
-                let newSrc = '';
-
-                // 根據點擊的 tab 設定 iframe 的 src
-                if (this.id === 'recordTab') {
-                    newSrc = 'record_content.html';
-                } else if (this.id === 'analyzeTab') {
-                    newSrc = 'analyze_content.html';
-                } else if (this.id === 'historyTab') {
-                    newSrc = 'history_content.html';
-                } else if (this.id === 'statsTab') {
-                    newSrc = 'stats_content.html';
-                } else if (this.id === 'profileTab') { // 新增的設定頁籤
-                    newSrc = 'profile_content.html';
-                }
-                
-                if (contentIframe.src.endsWith(newSrc)) {
-                    // 如果點擊當前頁籤，強制重新載入 iframe 內容以刷新
-                    contentIframe.contentWindow.location.reload(true);
-                } else {
-                    contentIframe.src = newSrc;
-                }
+            tab.addEventListener('click', function() {
+                switchTab(this.id);
             });
         });
 
-        // 頁面載入時初始化，預設選中記錄頁籤
-        document.addEventListener('DOMContentLoaded', async function() {
-            // 確保記錄頁籤是預設 active
-            document.getElementById('recordTab').classList.add('active');
-            document.getElementById('contentIframe').src = 'record_content.html';
-            console.log('主頁面載入完成，已設定預設頁籤和 iframe src');
+        // *** 新增：監聽來自 iframe 的訊息 ***
+        window.addEventListener('message', (event) => {
+            // 確保訊息來源是預期的 iframe (可選，但建議增加安全性檢查)
+            // if (event.origin !== 'http://your-domain.com') return; 
+            
+            if (event.data && event.data.type === 'recordSaved' && event.data.targetTab === 'analyze') {
+                console.log('主頁面收到來自 iframe 的記錄儲存訊息，準備切換到分析頁籤。');
+                switchTab('analyzeTab'); // 切換到分析頁籤
+            }
         });
 
-        // 注意：showMessage 函數由於 iframe 的隔離性，如果在 iframe 內需要顯示訊息，
-        // 需要在 iframe 內部重新定義或透過 postMessage 方式與父視窗溝通。
-        // 為簡化起見，此範例中每個 iframe 內容檔案會包含自己的 showMessage 函數。
+        // 頁面載入時初始化，預設選中記錄頁籤並載入用戶資料
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 預設選中記錄頁籤
+            switchTab('recordTab'); 
+            console.log('主頁面載入完成，已設定預設頁籤和 iframe src');
+
+            // 嘗試在主頁面載入時獲取用戶主檔並更新顯示
+            try {
+                const tempDbRequest = indexedDB.open(DB_NAME, DB_VERSION);
+                tempDbRequest.onsuccess = (event) => {
+                    const tempDb = event.target.result;
+                    const tx = tempDb.transaction([STORE_NAME_PROFILE], 'readonly');
+                    const store = tx.objectStore(STORE_NAME_PROFILE);
+                    const request = store.get(PROFILE_ID);
+                    request.onsuccess = () => {
+                        const profile = request.result;
+                        if (profile) {
+                            updateUserProfileDisplay(profile); // 更新主頁面顯示
+                        }
+                        tempDb.close();
+                    };
+                    request.onerror = (error) => {
+                        console.error('主頁面載入用戶主檔失敗:', error.target.error);
+                        tempDb.close();
+                    };
+                };
+                tempDbRequest.onerror = (error) => {
+                    console.error('主頁面打開 IndexedDB 失敗:', error.target.error);
+                };
+            } catch (error) {
+                console.error('主頁面嘗試載入用戶主檔時發生錯誤:', error);
+            }
+        });
     </script>
 </body>
 </html>
