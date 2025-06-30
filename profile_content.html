@@ -166,65 +166,10 @@
         // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
         let db;
         const DB_NAME = 'WindRiderDB'; // 確保與其他 iframe 共用同一個資料庫名稱
-        const DB_VERSION = 2; // *** 關鍵修改：提升資料庫版本號 ***
-        const STORE_NAME_PROFILE = 'userProfile'; // 新增一個用於儲存使用者主檔的 Object Store
+        const DB_VERSION = 3; // *** 再次提升資料庫版本號，確保升級觸發 ***
+        const STORE_NAME_RECORDS = 'records'; // 記錄 Object Store 名稱
+        const STORE_NAME_PROFILE = 'userProfile'; // 使用者主檔 Object Store 名稱
         const PROFILE_ID = 1; // 為了確保只有一筆使用者資料，我們使用固定的 ID
-
-        /**
-         * 初始化 IndexedDB 資料庫，包含 userProfile object store。
-         */
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                console.log('Profile iframe: 嘗試打開 IndexedDB 資料庫...');
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = (event) => {
-                    console.error('Profile iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
-                    showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
-                    reject(event.target.error);
-                };
-                request.onsuccess = (event) => {
-                    db = event.target.result;
-                    console.log('Profile iframe: IndexedDB 連接成功，版本:', db.version);
-                    // 檢查資料庫連接是否有效
-                    if (db) {
-                        resolve(db);
-                    } else {
-                        console.error('Profile iframe: IndexedDB 連接成功但資料庫物件為空。');
-                        showMessage('資料庫連接異常，請重新整理', 'error');
-                        reject(new Error('DB object is null after successful connection.'));
-                    }
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    db = event.target.result;
-                    console.log('Profile iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
-                    
-                    // 確保 records store 存在 (與其他頁面共用)
-                    if (!db.objectStoreNames.contains('records')) {
-                        try {
-                            const recordsStore = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
-                            recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
-                            recordsStore.createIndex('journalType', 'journalType', { unique: false });
-                            recordsStore.createIndex('creator', 'creator', { unique: false });
-                            console.log('Profile iframe: records Object Store 已創建/升級');
-                        } catch (e) {
-                            console.error('Profile iframe: 創建 records Object Store 失敗:', e);
-                        }
-                    }
-
-                    // 創建 userProfile object store
-                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
-                        try {
-                            const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); // 使用 profileId 作為主鍵
-                            console.log('Profile iframe: userProfile Object Store 已創建/升級');
-                        } catch (e) {
-                            console.error('Profile iframe: 創建 userProfile Object Store 失敗:', e);
-                        }
-                    }
-                };
-            });
-        }
 
         /**
          * 顯示應用程式訊息 (成功或錯誤)。
@@ -257,6 +202,74 @@
         }
 
         /**
+         * 初始化 IndexedDB 資料庫，包含 records 和 userProfile object store。
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                console.log('Profile iframe: 嘗試打開 IndexedDB 資料庫...');
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error('Profile iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
+                    showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
+                    reject(event.target.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('Profile iframe: IndexedDB 連接成功，版本:', db.version);
+                    // 在 onsuccess 中檢查 object stores 是否存在，以防 onupgradeneeded 未完全執行
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.warn('Profile iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
+                        // 這裡不reject，但會發出警告，因為資料庫可能部分成功
+                    }
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    console.log('Profile iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
+                    
+                    // 創建 records store
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        try {
+                            const recordsStore = db.createObjectStore(STORE_NAME_RECORDS, { keyPath: 'id', autoIncrement: true });
+                            recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
+                            recordsStore.createIndex('journalType', 'journalType', { unique: false });
+                            recordsStore.createIndex('creator', 'creator', { unique: false });
+                            console.log('Profile iframe: records Object Store 已創建');
+                        } catch (e) {
+                            console.error('Profile iframe: 創建 records Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建記錄儲存', 'error');
+                            // 在 onupgradeneeded 中發生錯誤通常會導致整個升級失敗
+                            event.preventDefault(); // 阻止升級成功
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Profile iframe: records Object Store 已存在');
+                    }
+
+                    // 創建 userProfile object store
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        try {
+                            const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); // 使用 profileId 作為主鍵
+                            console.log('Profile iframe: userProfile Object Store 已創建');
+                        } catch (e) {
+                            console.error('Profile iframe: 創建 userProfile Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建個人設定儲存', 'error');
+                            event.preventDefault(); // 阻止升級成功
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Profile iframe: userProfile Object Store 已存在');
+                    }
+                };
+            });
+        }
+
+        /**
          * 計算年齡並顯示。
          */
         function calculateAge() {
@@ -283,15 +296,30 @@
          * 載入使用者主檔資料並填充表單。
          */
         async function loadProfile() {
+            // 確保 db 已被初始化
             if (!db) {
-                // 如果 db 物件不存在，嘗試初始化，但這裡的 if (!db) 檢查應該由 DOMContentLoaded 中的 await initDB() 確保
-                console.warn('Profile iframe: loadProfile 在 db 未初始化時被調用。');
-                return; // 如果 db 真的沒有，直接退出避免錯誤
+                console.error('Profile iframe: loadProfile 錯誤 - 資料庫未初始化。');
+                showMessage('無法載入個人設定，資料庫未準備', 'error');
+                return;
             }
             
             return new Promise((resolve, reject) => {
                 try {
+                    // 再次檢查 object store 是否存在，以防萬一
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.error('Profile iframe: loadProfile 錯誤 - userProfile 物件儲存不存在。');
+                        showMessage('無法載入個人設定，資料庫結構異常', 'error');
+                        reject(new Error('userProfile object store not found.'));
+                        return;
+                    }
+
                     const tx = db.transaction([STORE_NAME_PROFILE], 'readonly');
+                    tx.onerror = (event) => {
+                        console.error('Profile iframe: 載入事務錯誤:', event.target.error);
+                        showMessage('載入個人設定事務失敗', 'error');
+                        reject(event.target.error);
+                    };
+
                     const store = tx.objectStore(STORE_NAME_PROFILE);
                     const request = store.get(PROFILE_ID); // 嘗試獲取固定 ID 的資料
                     
@@ -308,21 +336,20 @@
                             console.log('Profile iframe: 使用者主檔載入成功', profile);
                         } else {
                             console.log('Profile iframe: 尚無使用者主檔資料，使用預設值。');
-                            // 載入時如果沒有資料，預設選中第一個選項
-                            document.getElementById('involvementStage').value = '第一層｜CI｜靠近自己';
-                            // 清空其他欄位，防止舊值殘留
+                            // 載入時如果沒有資料，預設選中第一個選項並清空其他欄位
                             document.getElementById('nickname').value = '';
                             document.getElementById('birthdate').value = '';
                             document.getElementById('gender').value = '';
                             document.getElementById('siblings').value = 0;
                             document.getElementById('childOrder').value = 1;
+                            document.getElementById('involvementStage').value = '第一層｜CI｜靠近自己';
                             document.getElementById('ageDisplay').textContent = '';
                         }
                         resolve(profile);
                     };
                     request.onerror = (event) => {
-                        console.error('Profile iframe: 載入使用者主檔失敗:', event.target.error);
-                        showMessage('載入個人設定失敗', 'error');
+                        console.error('Profile iframe: 載入請求失敗:', event.target.error);
+                        showMessage('載入個人設定請求失敗', 'error');
                         reject(event.target.error);
                     };
                 } catch (e) {
@@ -337,8 +364,9 @@
          * 儲存使用者主檔資料。
          */
         async function saveProfile() {
+            // 確保 db 已被初始化
             if (!db) {
-                console.warn('Profile iframe: saveProfile 在 db 未初始化時被調用。');
+                console.error('Profile iframe: saveProfile 錯誤 - 資料庫未初始化。');
                 showMessage('無法儲存個人設定，資料庫未準備', 'error');
                 return;
             }
@@ -367,16 +395,25 @@
 
             return new Promise((resolve, reject) => {
                 try {
+                    // 再次檢查 object store 是否存在
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.error('Profile iframe: saveProfile 錯誤 - userProfile 物件儲存不存在。');
+                        showMessage('無法儲存個人設定，資料庫結構異常', 'error');
+                        reject(new Error('userProfile object store not found.'));
+                        return;
+                    }
+
                     const transaction = db.transaction([STORE_NAME_PROFILE], 'readwrite');
-                    transaction.oncomplete = () => { // 監聽交易完成事件
-                        console.log('Profile iframe: 交易完成。');
+                    transaction.oncomplete = () => {
+                        console.log('Profile iframe: 儲存交易完成。');
                         showMessage('個人設定已儲存！', 'success');
+                        // 儲存後可以考慮通知父視窗更新用戶狀態欄的顯示 (可選)
                         if (window.parent && typeof window.parent.updateUserProfileDisplay === 'function') {
                             window.parent.updateUserProfileDisplay(profileData);
                         }
                         resolve();
                     };
-                    transaction.onerror = (event) => { // 監聽交易錯誤事件
+                    transaction.onerror = (event) => {
                         console.error('Profile iframe: 儲存交易失敗:', event.target.error);
                         showMessage('儲存失敗，交易錯誤', 'error');
                         reject(event.target.error);
@@ -387,12 +424,10 @@
                     
                     request.onsuccess = () => {
                         console.log('Profile iframe: put 操作成功。');
-                        // 訊息顯示和 resolve 在 transaction.oncomplete 中處理
                     };
                     request.onerror = (event) => {
                         console.error('Profile iframe: put 操作失敗:', event.target.error);
-                        showMessage('儲存失敗，寫入錯誤', 'error');
-                        // reject 在 transaction.onerror 中處理
+                        // 錯誤會被 transaction.onerror 捕獲並處理
                     };
                 } catch (e) {
                     console.error('Profile iframe: saveProfile 事務或物件儲存操作失敗:', e);
