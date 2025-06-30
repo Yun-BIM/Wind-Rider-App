@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增記錄</title>
+    <style>
+        /* 由於此檔案會被嵌入 iframe，需要將部分主頁面的樣式複製過來，或確保主頁面樣式可以穿透 */
+        /* 為簡化起見，這裡只包含 iframe 內獨有的或覆蓋的樣式 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: transparent; /* 背景透明，讓主頁面的背景顯示 */
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* 防止 iframe 內部出現水平滾動條 */
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 20px;
+        }
+
+        .input-area {
+            background: #f7fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            min-height: 120px;
+            position: relative;
+        }
+
+        .input-placeholder {
+            color: #a0aec0;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+        }
+        
+        .input-area textarea {
+            width: 100%;
+            height: 80px;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #2d3748;
+            padding: 0;
+            margin-top: 0;
+        }
+
+        .voice-button {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-button:hover {
+            background: #cbd5e0;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .action-button {
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-button.secondary {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            color: white;
+        }
+
+        .action-button.tertiary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #4a5568;
+        }
+
+        /* 訊息提示框的動畫 CSS */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 這裡的內容是記錄頁面專屬的 -->
+    <h2 class="section-title">新增記錄</h2>
+    
+    <div class="input-area">
+        <textarea id="recordTextarea" placeholder="分享您今天的想法、心得或生活點滴..."></textarea>
+        <div class="voice-button">🎤</div>
+    </div>
+
+    <div class="action-buttons">
+        <div class="action-button primary">
+            <span>⛵</span>
+            航行日誌
+        </div>
+        <div class="action-button secondary">
+            <span>⚡</span>
+            觸發型事件記錄
+        </div>
+        <div class="action-button tertiary">
+            <span>🎯</span>
+            日記映射
+        </div>
+    </div>
+
+    <script>
+        // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
+        let db;
+        const DB_NAME = 'WindRiderDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'records';
+
+        /**
+         * 初始化 IndexedDB 資料庫。
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('Record iframe: IndexedDB 連接成功');
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                        store.createIndex('createdAt', 'createdAt', { unique: false });
+                        store.createIndex('journalType', 'journalType', { unique: false });
+                        store.createIndex('creator', 'creator', { unique: false });
+                        console.log('Record iframe: Object Store 已創建');
+                    }
+                };
+            });
+        }
+
+        /**
+         * 向 IndexedDB 新增一條記錄。
+         */
+        async function addRecord(recordText, journalType) {
+            if (!db) {
+                await initDB();
+            }
+            
+            const record = {
+                recordText: recordText,
+                journalType: journalType,
+                createdAt: new Date().toISOString(),
+                creator: 'Anna'
+            };
+            
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.add(record);
+                
+                request.onsuccess = () => {
+                    console.log('Record iframe: 記錄已儲存，ID:', request.result);
+                    resolve(request.result);
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        /**
+         * 顯示應用程式訊息 (成功或錯誤)。
+         */
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                animation: slideIn 0.3s ease;
+                ${type === 'success' ? 'background: #48bb78;' : 'background: #f56565;'}
+            `;
+            messageDiv.textContent = message;
+            // 將訊息添加到父視窗的 body，因為 iframe 自身的 body 可能太小
+            if (window.parent && window.parent.document) {
+                window.parent.document.body.appendChild(messageDiv);
+            } else {
+                document.body.appendChild(messageDiv);
+            }
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        /**
+         * 設定記錄按鈕的點擊事件，處理記錄儲存邏輯。
+         */
+        function setupActionButtons() {
+            document.querySelectorAll('.action-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    const textarea = document.getElementById('recordTextarea');
+                    const recordText = textarea ? textarea.value.trim() : '';
+                    
+                    if (!recordText) {
+                        showMessage('請輸入記錄內容', 'error');
+                        return;
+                    }
+                    
+                    let journalType = '';
+                    if (this.textContent.includes('航行日誌')) {
+                        journalType = 'navigation_log';
+                    } else if (this.textContent.includes('觸發型事件')) {
+                        journalType = 'trigger_event';
+                    } else if (this.textContent.includes('日記映射')) {
+                        journalType = 'diary_mapping';
+                    }
+                    
+                    try {
+                        const recordId = await addRecord(recordText, journalType);
+                        showMessage(`記錄已儲存 (ID: ${recordId})`);
+                        
+                        if (textarea) {
+                            textarea.value = ''; // 清空輸入框
+                        }
+                    } catch (error) {
+                        console.error('Record iframe: 儲存失敗:', error);
+                        showMessage('儲存失敗，請稍後再試', 'error');
+                    }
+                });
+            });
+        }
+        
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                await initDB();
+                setupActionButtons();
+                // 確保 textarea 預設就是可用的
+                const textarea = document.getElementById('recordTextarea');
+                if (textarea) {
+                    textarea.focus(); // 載入時自動聚焦
+                }
+                console.log('Record iframe: 頁面初始化完成');
+            } catch (error) {
+                console.error('Record iframe: 初始化失敗:', error);
+                showMessage('記錄頁面初始化失敗', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
