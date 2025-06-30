@@ -533,41 +533,7 @@
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => reject(request.error);
             });
-        }        <!-- 內容區域 -->
-        <div class="content">
-            <!-- 新增記錄內容 -->
-            <div id="recordContent" class="content-section">
-                <h2 class="section-title">新增記錄</h2>
-                
-                <div class="input-area">
-                    <div class="input-placeholder">分享您今天的想法、心得或生活點滴...</div>
-                    <div class="voice-button">🎤</div>
-                </div>
-
-                <div class="action-buttons">
-                    <div class="action-button primary">
-                        <span>⛵</span>
-                        航行日誌
-                    </div>
-                    <div class="action-button secondary">
-                        <span>⚡</span>
-                        觸發型事件記錄
-                    </div>
-                    <div class="action-button tertiary">
-                        <span>🎯</span>
-                        日記映射
-                    </div>
-                </div>
-            </div>
-
-            <!-- 歷史記錄內容 -->
-            <div id="historyContent" class="content-section" style="display: none;">
-                <h2 class="section-title">航行歷史</h2>
-                <div id="historyList" class="history-list">
-                    <!-- 歷史記錄將在這裡動態載入 -->
-                </div>
-            </div>
-        </div>
+        }
 
         // 顯示成功訊息
         function showMessage(message, type = 'success') {
