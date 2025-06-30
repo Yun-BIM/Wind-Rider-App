@@ -144,89 +144,9 @@
         // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
         let db;
         const DB_NAME = 'WindRiderDB';
-        const DB_VERSION = 4; // 與主頁面和其他 iframe 保持一致
-        const STORE_NAME = 'records';
-
-        /**
-         * 初始化 IndexedDB 資料庫。
-         */
-        function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = (event) => reject(event.target.error);
-                request.onsuccess = (event) => {
-                    db = event.target.result;
-                    console.log('Record iframe: IndexedDB 連接成功');
-                    resolve(db);
-                };
-                
-                request.onupgradeneeded = (event) => {
-                    db = event.target.result;
-                    // 確保 records store 存在
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                        store.createIndex('createdAt', 'createdAt', { unique: false });
-                        store.createIndex('journalType', 'journalType', { unique: false });
-                        store.createIndex('creator', 'creator', { unique: false });
-                        console.log('Record iframe: records Object Store 已創建');
-                    } else {
-                        console.log('Record iframe: records Object Store 已存在');
-                    }
-                    // 確保 userProfile store 也存在，儘管此頁面不直接使用，但升級時要處理
-                    if (!db.objectStoreNames.contains('userProfile')) {
-                        db.createObjectStore('userProfile', { keyPath: 'profileId' });
-                        console.log('Record iframe: userProfile Object Store 已創建');
-                    } else {
-                        console.log('Record iframe: userProfile Object Store 已存在');
-                    }
-                };
-            });
-        }
-
-        /**
-         * 向 IndexedDB 新增一條記錄。
-         */
-        async function addRecord(recordText, journalType) {
-            if (!db) {
-                try {
-                    await initDB();
-                } catch (error) {
-                    console.error('Record iframe: 新增記錄前資料庫初始化失敗:', error);
-                    showMessage('無法儲存記錄，應用程式初始化失敗', 'error');
-                    throw error;
-                }
-            }
-            
-            const record = {
-                recordText: recordText,
-                journalType: journalType,
-                createdAt: new Date().toISOString(),
-                creator: 'Anna'
-            };
-            
-            return new Promise((resolve, reject) => {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                transaction.oncomplete = () => {
-                    console.log('Record iframe: 記錄儲存交易完成。');
-                    resolve(request.result);
-                };
-                transaction.onerror = (event) => {
-                    console.error('Record iframe: 記錄儲存交易失敗:', event.target.error);
-                    reject(event.target.error);
-                };
-
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.add(record);
-                
-                request.onsuccess = () => {
-                    console.log('Record iframe: put 操作成功。');
-                };
-                request.onerror = (event) => {
-                    console.error('Record iframe: put 操作失敗:', event.target.error);
-                };
-            });
-        }
+        const DB_VERSION = 5; // *** 再次提升資料庫版本號，確保升級觸發 ***
+        const STORE_NAME_RECORDS = 'records'; // 記錄 Object Store 名稱
+        const STORE_NAME_PROFILE = 'userProfile'; // 使用者主檔 Object Store 名稱
 
         /**
          * 顯示應用程式訊息 (成功或錯誤)。
@@ -256,6 +176,128 @@
             setTimeout(() => {
                 messageDiv.remove();
             }, 3000);
+        }
+
+        /**
+         * 初始化 IndexedDB 資料庫。
+         */
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                console.log('Record iframe: 嘗試打開 IndexedDB 資料庫...');
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = (event) => {
+                    console.error('Record iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
+                    showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
+                    reject(event.target.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log('Record iframe: IndexedDB 連接成功，版本:', db.version);
+                    // 在 onsuccess 中檢查 object stores 是否存在，以防 onupgradeneeded 未完全執行
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        console.warn('Record iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
+                    }
+                    resolve(db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    console.log('Record iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
+                    
+                    // 創建 records store
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        try {
+                            const recordsStore = db.createObjectStore(STORE_NAME_RECORDS, { keyPath: 'id', autoIncrement: true });
+                            recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
+                            recordsStore.createIndex('journalType', 'journalType', { unique: false });
+                            recordsStore.createIndex('creator', 'creator', { unique: false });
+                            console.log('Record iframe: records Object Store 已創建');
+                        } catch (e) {
+                            console.error('Record iframe: 創建 records Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建記錄儲存', 'error');
+                            event.preventDefault(); // 阻止升級成功
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Record iframe: records Object Store 已存在 (無需創建)');
+                    }
+
+                    // 創建 userProfile object store
+                    if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                        try {
+                            const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); 
+                            console.log('Record iframe: userProfile Object Store 已創建');
+                        } catch (e) {
+                            console.error('Record iframe: 創建 userProfile Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建個人設定儲存', 'error');
+                            event.preventDefault(); // 阻止升級成功
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Record iframe: userProfile Object Store 已存在 (無需創建)');
+                    }
+                };
+            });
+        }
+
+        /**
+         * 向 IndexedDB 新增一條記錄。
+         */
+        async function addRecord(recordText, journalType) {
+            if (!db) {
+                console.error('Record iframe: addRecord 錯誤 - 資料庫未初始化。');
+                showMessage('無法儲存記錄，資料庫未準備', 'error');
+                return;
+            }
+            
+            // 再次檢查 object store 是否存在，以防萬一
+            if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                console.error('Record iframe: addRecord 錯誤 - records 物件儲存不存在。');
+                showMessage('無法儲存記錄，資料庫結構異常', 'error');
+                throw new Error('records object store not found.');
+            }
+
+            const record = {
+                recordText: recordText,
+                journalType: journalType,
+                createdAt: new Date().toISOString(),
+                creator: 'Anna'
+            };
+            
+            return new Promise((resolve, reject) => {
+                try {
+                    const transaction = db.transaction([STORE_NAME_RECORDS], 'readwrite');
+                    transaction.oncomplete = () => {
+                        console.log('Record iframe: 記錄儲存交易完成。');
+                        resolve(); // 交易完成時解析 Promise
+                    };
+                    transaction.onerror = (event) => {
+                        console.error('Record iframe: 記錄儲存交易失敗:', event.target.error);
+                        showMessage('儲存失敗，交易錯誤', 'error');
+                        reject(event.target.error);
+                    };
+
+                    const store = transaction.objectStore(STORE_NAME_RECORDS);
+                    const request = store.add(record);
+                    
+                    request.onsuccess = (event) => {
+                        console.log('Record iframe: put 操作成功，ID:', event.target.result);
+                        // 這裡不需要 resolve，因為會在 transaction.oncomplete 中處理
+                    };
+                    request.onerror = (event) => {
+                        console.error('Record iframe: put 操作失敗:', event.target.error);
+                        // 錯誤會被 transaction.onerror 捕獲並處理
+                    };
+                } catch (e) {
+                    console.error('Record iframe: addRecord 事務或物件儲存操作失敗:', e);
+                    showMessage('無法儲存記錄，請檢查資料庫操作', 'error');
+                    reject(e);
+                }
+            });
         }
 
         /**
@@ -294,14 +336,14 @@
                             textarea.value = ''; // 清空輸入框
                         }
 
-                        // *** 新增：儲存成功後，向父視窗發送訊息以切換頁籤 ***
+                        // 儲存成功後，向父視窗發送訊息以切換頁籤
                         if (window.parent) {
                             window.parent.postMessage({ type: 'recordSaved', targetTab: 'analyze' }, '*');
                         }
                         
                     } catch (error) {
                         console.error('Record iframe: 儲存失敗:', error);
-                        showMessage('儲存失敗，請稍後再試', 'error');
+                        // showMessage 已經在 addRecord 內部處理，這裡可以省略或根據需要調整
                     }
                 });
             });
@@ -309,6 +351,7 @@
         
         // 頁面載入時初始化
         document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Record iframe: DOMContentLoaded 觸發。');
             try {
                 await initDB();
                 setupActionButtons();
@@ -316,10 +359,10 @@
                 if (textarea) {
                     textarea.focus();
                 }
-                console.log('Record iframe: 頁面初始化完成');
+                console.log('Record iframe: 頁面初始化完成。');
             } catch (error) {
-                console.error('Record iframe: 初始化失敗:', error);
-                showMessage('記錄頁面初始化失敗', 'error');
+                console.error('Record iframe: 頁面初始化失敗，捕獲錯誤:', error);
+                showMessage('記錄頁面初始化失敗，請檢查瀏覽器控制台', 'error');
             }
         });
     </script>
