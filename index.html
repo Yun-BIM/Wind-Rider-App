@@ -369,6 +369,10 @@
                 <span>📊</span>
                 統計
             </div>
+             <div class="nav-tab" id="profileTab">
+                <span>👤</span>
+                設定
+            </div>
         </div>
 
         <!-- 內容區域 - 使用 iframe 載入各功能頁面 -->
@@ -414,6 +418,8 @@
                     newSrc = 'history_content.html';
                 } else if (this.id === 'statsTab') {
                     newSrc = 'stats_content.html';
+                } else if (this.id === 'profileTab') { // 新增的設定頁籤
+                    newSrc = 'profile_content.html';
                 }
                 
                 if (contentIframe.src.endsWith(newSrc)) {
