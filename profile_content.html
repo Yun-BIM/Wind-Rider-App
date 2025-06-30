@@ -166,7 +166,7 @@
         // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
         let db;
         const DB_NAME = 'WindRiderDB'; // 確保與其他 iframe 共用同一個資料庫名稱
-        const DB_VERSION = 1;
+        const DB_VERSION = 2; // *** 關鍵修改：提升資料庫版本號 ***
         const STORE_NAME_PROFILE = 'userProfile'; // 新增一個用於儲存使用者主檔的 Object Store
         const PROFILE_ID = 1; // 為了確保只有一筆使用者資料，我們使用固定的 ID
 
@@ -177,15 +177,20 @@
             return new Promise((resolve, reject) => {
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
                 
-                request.onerror = () => reject(request.error);
+                request.onerror = (event) => { // 增加錯誤事件參數
+                    console.error('Profile iframe: IndexedDB 打開失敗:', event.target.error); // 記錄更詳細的錯誤訊息
+                    reject(event.target.error);
+                };
                 request.onsuccess = () => {
                     db = request.result;
-                    console.log('Profile iframe: IndexedDB 連接成功');
+                    console.log('Profile iframe: IndexedDB 連接成功 (版本: ' + db.version + ')'); // 記錄資料庫版本
                     resolve(db);
                 };
                 
                 request.onupgradeneeded = (event) => {
                     db = event.target.result;
+                    console.log('Profile iframe: IndexedDB 正在升級/創建資料庫... (舊版本: ' + event.oldVersion + ', 新版本: ' + event.newVersion + ')');
+                    
                     // 確保 records store 存在 (與其他頁面共用)
                     if (!db.objectStoreNames.contains('records')) {
                         const recordsStore = db.createObjectStore('records', { keyPath: 'id', autoIncrement: true });
@@ -262,7 +267,13 @@
          */
         async function loadProfile() {
             if (!db) {
-                await initDB();
+                try { // 確保在調用 loadProfile 前 db 已被初始化
+                    await initDB();
+                } catch (error) {
+                    console.error('Profile iframe: loadProfile 無法初始化 DB:', error);
+                    showMessage('無法載入個人設定，請檢查資料庫狀態', 'error');
+                    return; // 無法初始化 DB 則退出
+                }
             }
             
             return new Promise((resolve, reject) => {
@@ -288,9 +299,9 @@
                     }
                     resolve(profile);
                 };
-                request.onerror = () => {
-                    console.error('Profile iframe: 載入使用者主檔失敗:', request.error);
-                    reject(request.error);
+                request.onerror = (event) => { // 增加錯誤事件參數
+                    console.error('Profile iframe: 載入使用者主檔失敗:', event.target.error);
+                    reject(event.target.error);
                 };
             });
         }
@@ -300,7 +311,13 @@
          */
         async function saveProfile() {
             if (!db) {
-                await initDB();
+                try { // 確保在調用 saveProfile 前 db 已被初始化
+                    await initDB();
+                } catch (error) {
+                    console.error('Profile iframe: saveProfile 無法初始化 DB:', error);
+                    showMessage('無法儲存個人設定，請檢查資料庫狀態', 'error');
+                    return; // 無法初始化 DB 則退出
+                }
             }
             
             const nickname = document.getElementById('nickname').value.trim();
@@ -334,15 +351,16 @@
                     console.log('Profile iframe: 使用者主檔儲存成功');
                     showMessage('個人設定已儲存！', 'success');
                     // 儲存後可以考慮通知父視窗更新用戶狀態欄的顯示 (可選)
+                    // 這需要主頁面 wind_rider_webapp.html 定義一個 window.updateUserProfileDisplay 函數
                     if (window.parent && typeof window.parent.updateUserProfileDisplay === 'function') {
                         window.parent.updateUserProfileDisplay(profileData);
                     }
                     resolve();
                 };
-                request.onerror = () => {
-                    console.error('Profile iframe: 儲存使用者主檔失敗:', request.error);
+                request.onerror = (event) => { // 增加錯誤事件參數
+                    console.error('Profile iframe: 儲存使用者主檔失敗:', event.target.error);
                     showMessage('儲存失敗，請稍後再試', 'error');
-                    reject(request.error);
+                    reject(event.target.error);
                 };
             });
         }
@@ -350,16 +368,16 @@
         // 事件監聽器
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                await initDB();
-                await loadProfile(); // 頁面載入時載入現有資料
-
+                await initDB(); // 首先確保資料庫初始化
+                await loadProfile(); // 再載入現有資料
+                
                 document.getElementById('birthdate').addEventListener('change', calculateAge);
                 document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
 
                 console.log('Profile iframe: 頁面初始化完成');
             } catch (error) {
                 console.error('Profile iframe: 初始化失敗:', error);
-                showMessage('個人設定頁面初始化失敗', 'error');
+                showMessage('個人設定頁面初始化失敗，請檢查瀏覽器控制台', 'error');
             }
         });
     </script>
