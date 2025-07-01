@@ -266,13 +266,11 @@
 </head>
 <body>
     <div class="container">
-        <!-- 標題區域 -->
         <div class="header">
             <h1 class="title">人生航行 Wind Rider</h1>
             <p class="subtitle">記錄生活航程，分析情緒風向，探索內心海域</p>
         </div>
 
-        <!-- 使用者狀態欄 -->
         <div class="user-status">
             <div class="status-header" onclick="toggleStatus()">
                 <div class="status-main">
@@ -351,7 +349,6 @@
             </div>
         </div>
 
-        <!-- 導航標籤 -->
         <div class="nav-tabs">
             <div class="nav-tab active" id="recordTab">
                 <span>➕</span>
@@ -375,7 +372,6 @@
             </div>
         </div>
 
-        <!-- 內容區域 - 使用 iframe 載入各功能頁面 -->
         <div class="content">
             <iframe id="contentIframe" class="content-iframe" src="record_content.html"></iframe>
         </div>
@@ -425,8 +421,9 @@
         /**
          * 根據目標頁籤 ID 切換 iframe 內容並更新導航欄。
          * @param {string} targetTabId - 目標頁籤的 ID (例如 'analyzeTab', 'recordTab')。
+         * @param {number} [recordIdToAnalyze] - 可選的，要傳遞給分析頁面的記錄 ID。
          */
-        function switchTab(targetTabId) {
+        function switchTab(targetTabId, recordIdToAnalyze = null) {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
             const targetTabElement = document.getElementById(targetTabId);
             if (targetTabElement) {
@@ -456,11 +453,30 @@
                     newSrc = 'record_content.html'; // 預設回到記錄頁
             }
             
-            if (contentIframe.src.endsWith(newSrc)) {
-                // 如果點擊當前頁籤，強制重新載入 iframe 內容以刷新
-                contentIframe.contentWindow.location.reload(true);
-            } else {
+            // Only update src if it's different or if we need to force reload for analyze tab with new data
+            const currentSrc = contentIframe.src.substring(contentIframe.src.lastIndexOf('/') + 1);
+
+            if (currentSrc !== newSrc) {
                 contentIframe.src = newSrc;
+                // Once the iframe is loaded, send the message
+                contentIframe.onload = () => {
+                    if (targetTabId === 'analyzeTab' && recordIdToAnalyze !== null) {
+                        contentIframe.contentWindow.postMessage({
+                            type: 'loadRecordForAnalysis',
+                            recordId: recordIdToAnalyze
+                        }, '*');
+                    }
+                    contentIframe.onload = null; // Remove the event listener after it fires once
+                };
+            } else if (targetTabId === 'analyzeTab' && recordIdToAnalyze !== null) {
+                // If already on analyze tab, and we have a new recordId, just send message
+                contentIframe.contentWindow.postMessage({
+                    type: 'loadRecordForAnalysis',
+                    recordId: recordIdToAnalyze
+                }, '*');
+            } else {
+                // If clicking current tab without new data, force reload to refresh content
+                contentIframe.contentWindow.location.reload(true);
             }
         }
 
@@ -478,7 +494,11 @@
             
             if (event.data && event.data.type === 'recordSaved' && event.data.targetTab === 'analyze') {
                 console.log('主頁面收到來自 iframe 的記錄儲存訊息，準備切換到分析頁籤。');
-                switchTab('analyzeTab'); // 切換到分析頁籤
+                // When a record is saved from record_content, it doesn't need to pass a specific recordId, analyze_content will fetch the latest.
+                switchTab('analyzeTab'); 
+            } else if (event.data && event.data.type === 'navigateToAnalyze' && typeof event.data.recordId !== 'undefined') {
+                console.log(`主頁面收到來自歷史記錄的導航訊息，記錄 ID: ${event.data.recordId}，準備切換到分析頁籤。`);
+                switchTab('analyzeTab', event.data.recordId);
             }
         });
 
@@ -524,4 +544,3 @@
     </script>
 </body>
 </html>
-
