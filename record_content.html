@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>分析</title>
+    <title>新增記錄</title>
     <style>
+        /* 由於此檔案會被嵌入 iframe，需要將部分主頁面的樣式複製過來，或確保主頁面樣式可以穿透 */
+        /* 為簡化起見，這裡只包含 iframe 內獨有的或覆蓋的樣式 */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: transparent;
+            background: transparent; /* 背景透明，讓主頁面的背景顯示 */
             margin: 0;
             padding: 0;
-            overflow-x: hidden;
+            overflow-x: hidden; /* 防止 iframe 內部出現水平滾動條 */
         }
 
         .section-title {
@@ -20,190 +22,92 @@
             margin-bottom: 20px;
         }
 
-        .analysis-container {
+        .input-area {
             background: #f7fafc;
             border-radius: 16px;
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid #e2e8f0;
-        }
-
-        .analysis-group {
-            margin-bottom: 15px;
-        }
-
-        .analysis-group:last-of-type {
-            margin-bottom: 0;
-        }
-
-        .analysis-label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .analysis-value,
-        .editable-input,
-        .editable-textarea,
-        .editable-select {
-            font-size: 14px;
-            color: #2d3748;
-            line-height: 1.6;
-            background: #edf2f7;
-            padding: 10px 12px;
-            border-radius: 8px;
-            min-height: 40px;
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #edf2f7; /* 預設邊框 */
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .editable-input:focus,
-        .editable-textarea:focus,
-        .editable-select:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.25);
-        }
-
-        .analysis-placeholder {
-            color: #a0aec0;
-            font-style: italic;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 5px;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .checkbox-group label {
-            font-weight: normal; /* 覆蓋 .analysis-label 的粗體 */
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-
-        .tags-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .tag-item {
-            background: #cbd5e0;
-            color: #2d3748;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .tag-item .remove-tag {
-            cursor: pointer;
-            font-weight: bold;
-            color: #4a5568;
-        }
-
-        .tag-input {
-            border: 1px solid #cbd5e0;
-            border-radius: 8px;
-            padding: 8px 10px;
-            font-size: 14px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-top: 5px;
-        }
-
-        .original-log-button {
-            width: 100%;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border: none;
-            border-radius: 16px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 15px;
-        }
-
-        .original-log-button:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .original-log-button:active {
-            transform: scale(0.98);
-        }
-
-        /* 原始日誌彈窗 */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 1001; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            overflow: auto; /* Enable scroll if needed */
-            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: auto;
-            padding: 20px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 500px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            min-height: 120px;
             position: relative;
         }
 
-        .close-button {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
+        .input-placeholder {
+            color: #a0aec0;
             position: absolute;
-            top: 10px;
-            right: 20px;
-            cursor: pointer;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
         }
 
-        .close-button:hover,
-        .close-button:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .modal-body {
-            max-height: 70vh; /* 限制彈窗內容高度 */
-            overflow-y: auto; /* 內容過長時滾動 */
-            margin-top: 20px;
-            padding-right: 10px; /* 為滾動條留出空間 */
-            white-space: pre-wrap; /* 保留換行和空格 */
-            word-wrap: break-word; /* 長單詞自動換行 */
-            color: #2d3748;
+        
+        .input-area textarea {
+            width: 100%;
+            height: 80px;
+            border: none;
+            background: transparent;
+            resize: none;
+            outline: none;
+            font-family: inherit;
             font-size: 14px;
+            line-height: 1.5;
+            color: #2d3748;
+            padding: 0; /* 移除預設 padding */
+            margin-top: 0; /* 確保頂部沒有額外空間 */
+        }
+
+        .voice-button {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: #e2e8f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .voice-button:hover {
+            background: #cbd5e0;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .action-button {
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .action-button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-button.secondary {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+            color: white;
+        }
+
+        .action-button.tertiary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #4a5568;
         }
 
         /* 訊息提示框的動畫 CSS */
@@ -214,114 +118,38 @@
     </style>
 </head>
 <body>
-    <h2 class="section-title">分析結果</h2>
+    <!-- 這裡的內容是記錄頁面專屬的 -->
+    <h2 class="section-title">新增記錄</h2>
     
-    <div class="analysis-container">
-        <div class="analysis-group">
-            <div class="analysis-label">標題</div>
-            <div id="analysisTitle" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析語音內容給出的標題...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">建檔時間</div>
-            <div id="creationTime" class="analysis-value">
-                <span class="analysis-placeholder">使用者輸入語音建檔時間...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">日誌類型</div>
-            <div id="journalType" class="analysis-value">
-                <span class="analysis-placeholder">使用者當時選的類型...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">語音層級</div>
-            <div id="voiceLevel" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析語音層級 (L0:無意識抒發層 L1:被動反應層 L2:初步覺察層 L3:有選擇層)...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">語音分析</div>
-            <div id="voiceAnalysisReason" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析語音層級分層的原因...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">標記精華</div>
-            <div class="checkbox-group">
-                <input type="checkbox" id="markAsEssence">
-                <label for="markAsEssence">這篇是否要列為精華</label>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">生活面向</div>
-            <input type="text" id="lifeAspect" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">情緒標籤</div>
-            <input type="text" id="emotionTags" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">關鍵句子</div>
-            <div id="keySentences" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析自動帶出關鍵句子...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">心理構面</div>
-            <select id="psychologicalConstruct" class="editable-select">
-                <option value="">請選擇</option>
-                <option value="情緒調適">情緒調適</option>
-                <option value="照護修復">照護修復</option>
-                <option value="追尋意義">追尋意義</option>
-                <option value="適應壓力">適應壓力</option>
-                <option value="自我探索">自我探索</option>
-                <option value="建構關係">建構關係</option>
-            </select>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">底層信念</div>
-            <div id="underlyingBelief" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析語音內容給出的底層信念...</span>
-            </div>
-        </div>
-
-        <div class="analysis-group">
-            <div class="analysis-label">引導提問</div>
-            <div id="guidedQuestions" class="analysis-value">
-                <span class="analysis-placeholder">AI 自動分析帶出底層信念的提問...</span>
-            </div>
-        </div>
-
-        <button id="showOriginalLogBtn" class="original-log-button">原始日誌</button>
+    <div class="input-area">
+        <textarea id="recordTextarea" placeholder="分享您今天的想法、心得或生活點滴..."></textarea>
+        <div class="voice-button">🎤</div>
     </div>
 
-    <div id="originalLogModal" class="modal">
-        <div class="modal-content">
-            <span class="close-button" id="closeModalBtn">&times;</span>
-            <h3>原始日誌內容</h3>
-            <div id="modalLogContent" class="modal-body"></div>
+    <div class="action-buttons">
+        <div class="action-button primary">
+            <span>⛵</span>
+            航行日誌
+        </div>
+
+        <div class="action-button secondary">
+            <span>⚡</span>
+            觸發型事件記錄
+        </div>
+
+        <div class="action-button tertiary">
+            <span>🎯</span>
+            日記映射
         </div>
     </div>
 
     <script>
-        // IndexedDB 資料庫初始化
+        // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
         let db;
         const DB_NAME = 'WindRiderDB';
-        const DB_VERSION = 5; // *** 與主頁面和其他 iframe 保持一致 ***
-        const STORE_NAME_RECORDS = 'records';
-        const STORE_NAME_PROFILE = 'userProfile'; // 確保 userProfile 也被處理
+        const DB_VERSION = 5; // *** 再次提升資料庫版本號，確保升級觸發 ***
+        const STORE_NAME_RECORDS = 'records'; // 記錄 Object Store 名稱
+        const STORE_NAME_PROFILE = 'userProfile'; // 使用者主檔 Object Store 名稱
 
         /**
          * 顯示應用程式訊息 (成功或錯誤)。
@@ -341,6 +169,7 @@
                 ${type === 'success' ? 'background: #48bb78;' : 'background: #f56565;'}
             `;
             messageDiv.textContent = message;
+            // 將訊息添加到父視窗的 body，因為 iframe 自身的 body 可能太小
             if (window.parent && window.parent.document) {
                 window.parent.document.body.appendChild(messageDiv);
             } else {
@@ -357,29 +186,29 @@
          */
         function initDB() {
             return new Promise((resolve, reject) => {
-                console.log('Analyze iframe: 嘗試打開 IndexedDB 資料庫...');
+                console.log('Record iframe: 嘗試打開 IndexedDB 資料庫...');
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
                 
                 request.onerror = (event) => {
-                    console.error('Analyze iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
+                    console.error('Record iframe: IndexedDB 打開失敗，錯誤：', event.target.error);
                     showMessage('資料庫初始化失敗，請檢查控制台錯誤', 'error');
                     reject(event.target.error);
                 };
 
                 request.onsuccess = (event) => {
                     db = event.target.result;
-                    console.log('Analyze iframe: IndexedDB 連接成功，版本:', db.version);
-                    // 檢查必要的 Object Stores 是否存在
+                    console.log('Record iframe: IndexedDB 連接成功，版本:', db.version);
+                    // 在 onsuccess 中檢查 object stores 是否存在，以防 onupgradeneeded 未完全執行
                     if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
-                        console.warn('Analyze iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
+                        console.warn('Record iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
                     }
                     resolve(db);
                 };
-                
+
                 request.onupgradeneeded = (event) => {
-                    db = event.target.result;
-                    console.log('Analyze iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
-                    
+                db = event.target.result;
+                console.log('Record iframe: IndexedDB 正在升級/創建資料庫... (舊版本:', event.oldVersion, ', 新版本:', event.newVersion, ')');
+
                     // 創建 records store
                     if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
                         try {
@@ -387,281 +216,163 @@
                             recordsStore.createIndex('createdAt', 'createdAt', { unique: false });
                             recordsStore.createIndex('journalType', 'journalType', { unique: false });
                             recordsStore.createIndex('creator', 'creator', { unique: false });
-                            console.log('Analyze iframe: records Object Store 已創建');
+                            console.log('Record iframe: records Object Store 已創建');
                         } catch (e) {
-                            console.error('Analyze iframe: 創建 records Object Store 失敗:', e);
+                            console.error('Record iframe: 創建 records Object Store 失敗:', e);
                             showMessage('資料庫升級錯誤：無法創建記錄儲存', 'error');
-                            event.preventDefault(); 
+                            event.preventDefault(); // 阻止升級成功
                             reject(e);
                             return;
                         }
                     } else {
-                        console.log('Analyze iframe: records Object Store 已存在 (無需創建)');
+                        console.log('Record iframe: records Object Store 已存在 (無需創建)');
                     }
 
                     // 創建 userProfile object store
                     if (!db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
                         try {
                             const profileStore = db.createObjectStore(STORE_NAME_PROFILE, { keyPath: 'profileId' }); 
-                            console.log('Analyze iframe: userProfile Object Store 已創建');
+                            console.log('Record iframe: userProfile Object Store 已創建');
                         } catch (e) {
-                            console.error('Analyze iframe: 創建 userProfile Object Store 失敗:', e);
+                            console.error('Record iframe: 創建 userProfile Object Store 失敗:', e);
                             showMessage('資料庫升級錯誤：無法創建個人設定儲存', 'error');
-                            event.preventDefault(); 
+                                event.preventDefault(); // 阻止升級成功
                             reject(e);
                             return;
                         }
                     } else {
-                        console.log('Analyze iframe: userProfile Object Store 已存在 (無需創建)');
+                        console.log('Record iframe: userProfile Object Store 已存在 (無需創建)');
                     }
                 };
             });
         }
 
         /**
-         * 獲取指定 ID 的記錄內容。
-         * @param {number} id - 要獲取的記錄 ID。
-         * @returns {Promise<Object|null>} Promise 對象，解析為指定 ID 的記錄物件，如果沒有則為 null。
+         * 向 IndexedDB 新增一條記錄。
          */
-        async function getRecordById(id) {
+        async function addRecord(recordText, journalType) {
             if (!db) {
-                await initDB(); // 確保 DB 已初始化
+                console.error('Record iframe: addRecord 錯誤 - 資料庫未初始化。');
+                showMessage('無法儲存記錄，資料庫未準備', 'error');
+                return;
             }
-            return new Promise((resolve, reject) => {
-                try {
-                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
-                        console.error('Analyze iframe: getRecordById 錯誤 - records 物件儲存不存在。');
-                        showMessage('無法獲取記錄，資料庫結構異常', 'error');
-                        resolve(null);
-                        return;
-                    }
-
-                    const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
-                    tx.onerror = (event) => {
-                        console.error('Analyze iframe: 獲取指定記錄事務錯誤:', event.target.error);
-                        showMessage('獲取指定記錄事務失敗', 'error');
-                        reject(event.target.error);
-                    };
-
-                    const store = tx.objectStore(STORE_NAME_RECORDS);
-                    const request = store.get(id);
-
-                    request.onsuccess = (event) => {
-                        resolve(event.target.result); // 返回指定 ID 的記錄
-                    };
-                    request.onerror = (event) => {
-                        console.error('Analyze iframe: 獲取指定記錄請求失敗:', event.target.error);
-                        reject(event.target.error);
-                    };
-                } catch (e) {
-                    console.error('Analyze iframe: getRecordById 事務或物件儲存操作失敗:', e);
-                    reject(e);
-                }
-            });
-        }
-
-        /**
-         * 獲取最近一筆記錄的內容。
-         * @returns {Promise<Object|null>} Promise 對象，解析為最近一筆記錄的完整物件，如果沒有則為 null。
-         */
-        async function getLatestRecord() {
-            if (!db) {
-                await initDB(); // 確保 DB 已初始化
+            
+            // 再次檢查 object store 是否存在，以防萬一
+            if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                console.error('Record iframe: addRecord 錯誤 - records 物件儲存不存在。');
+                showMessage('無法儲存記錄，資料庫結構異常', 'error');
+                throw new Error('records object store not found.');
             }
-            return new Promise((resolve, reject) => {
-                try {
-                    // 檢查 object store 是否存在
-                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
-                        console.error('Analyze iframe: getLatestRecord 錯誤 - records 物件儲存不存在。');
-                        showMessage('無法獲取記錄，資料庫結構異常', 'error');
-                        resolve(null); // 返回 null 而不是 reject，讓後續流程可以繼續
-                        return;
-                    }
-
-                    const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
-                    tx.onerror = (event) => {
-                        console.error('Analyze iframe: 獲取最新記錄事務錯誤:', event.target.error);
-                        showMessage('獲取最新記錄事務失敗', 'error');
-                        reject(event.target.error);
-                    };
-
-                    const store = tx.objectStore(STORE_NAME_RECORDS);
-                    const request = store.openCursor(null, 'prev'); 
-                    let latestRecord = null;
-
-                    request.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            latestRecord = cursor.value;
-                            resolve(latestRecord); // 返回最新記錄的完整物件
-                        } else {
-                            resolve(null); // 沒有記錄
-                        }
-                    };
-                    request.onerror = (event) => {
-                        console.error('Analyze iframe: 獲取最新記錄請求失敗:', event.target.error);
-                        reject(event.target.error);
-                    };
-                } catch (e) {
-                    console.error('Analyze iframe: getLatestRecord 事務或物件儲存操作失敗:', e);
-                    reject(e);
-                }
-            });
-        }
-
-
-        /**
-         * 執行分析並顯示結果。
-         * 這裡僅為範例，實際分析需要後端或 LLM 整合。
-         * @param {number} [recordId] - 可選的，要分析的記錄 ID。如果未提供，則分析最新記錄。
-         */
-        async function performAnalysis(recordId = null) {
-            const analysisElements = {
-                title: document.getElementById('analysisTitle'),
-                creationTime: document.getElementById('creationTime'),
-                journalType: document.getElementById('journalType'),
-                voiceLevel: document.getElementById('voiceLevel'),
-                voiceAnalysisReason: document.getElementById('voiceAnalysisReason'),
-                markAsEssence: document.getElementById('markAsEssence'),
-                lifeAspect: document.getElementById('lifeAspect'),
-                emotionTags: document.getElementById('emotionTags'),
-                keySentences: document.getElementById('keySentences'),
-                psychologicalConstruct: document.getElementById('psychologicalConstruct'),
-                underlyingBelief: document.getElementById('underlyingBelief'),
-                guidedQuestions: document.getElementById('guidedQuestions'),
-                modalLogContent: document.getElementById('modalLogContent')
+            
+            const record = {
+                recordText: recordText,
+                journalType: journalType,
+                createdAt: new Date().toISOString(),
+                creator: 'Anna'
             };
-
-            // 清空舊內容並顯示載入狀態
-            for (const key in analysisElements) {
-                if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
-                    analysisElements[key].innerHTML = '<span class="analysis-placeholder">正在分析中...</span>';
-                }
-            }
-            // 清空可編輯欄位
-            analysisElements.lifeAspect.value = '';
-            analysisElements.emotionTags.value = '';
-            analysisElements.psychologicalConstruct.value = '';
-            analysisElements.markAsEssence.checked = false;
-
-
-            try {
-                let targetRecord = null;
-                if (recordId !== null) {
-                    console.log(`Analyze iframe: 嘗試獲取記錄 ID: ${recordId} 進行分析...`);
-                    targetRecord = await getRecordById(recordId);
-                } else {
-                    console.log('Analyze iframe: 嘗試獲取最新記錄進行分析...');
-                    targetRecord = await getLatestRecord();
-                }
-
-                if (targetRecord) {
-                    console.log('Analyze iframe: 獲取到要分析的記錄:', targetRecord);
-                    
-                    // 填充只讀欄位
-                    analysisElements.title.textContent = `關於「${targetRecord.recordText.substring(0, Math.min(targetRecord.recordText.length, 15))}...」的分析`;
-                    analysisElements.creationTime.textContent = new Date(targetRecord.createdAt).toLocaleString('zh-TW', { hour12: false });
-                    
-                    const typeMap = {
-                        navigation_log: '航行日誌',
-                        trigger_event: '觸發型事件記錄',
-                        diary_mapping: '日記映射'
+            
+            return new Promise((resolve, reject) => {
+                try {
+                    const transaction = db.transaction([STORE_NAME_RECORDS], 'readwrite');
+                    transaction.oncomplete = () => {
+                        console.log('Record iframe: 記錄儲存交易完成。');
+                        resolve(); // 交易完成時解析 Promise
                     };
-                    analysisElements.journalType.textContent = typeMap[targetRecord.journalType] || targetRecord.journalType;
+                    transaction.onerror = (event) => {
+                        console.error('Record iframe: 記錄儲存交易失敗:', event.target.error);
+                        showMessage('儲存失敗，交易錯誤', 'error');
+                        reject(event.target.error);
+                    };
 
-                    // 模擬 AI 分析結果
-                    const simulatedVoiceLevel = ['L0:無意識抒發層', 'L1:被動反應層', 'L2:初步覺察層', 'L3:有選擇層'][Math.floor(Math.random() * 4)];
-                    analysisElements.voiceLevel.textContent = simulatedVoiceLevel;
-                    analysisElements.voiceAnalysisReason.textContent = `根據內容長度與詞彙頻率，AI 判斷為 ${simulatedVoiceLevel}。`;
-                    
-                    analysisElements.keySentences.textContent = `「${targetRecord.recordText.substring(0, Math.min(targetRecord.recordText.length, 30))}...」是核心句。`;
-                    
-                    const simulatedBelief = ['自我價值', '人際連結', '成長潛力', '安全感'][Math.floor(Math.random() * 4)];
-                    analysisElements.underlyingBelief.textContent = `這段日誌可能反映了您對「${simulatedBelief}」的底層信念。`;
-                    analysisElements.guidedQuestions.textContent = `關於「${simulatedBelief}」，您可以思考：這對您意味著什麼？如何進一步探索？`;
+                    const store = transaction.objectStore(STORE_NAME_RECORDS);
+                    const request = store.add(record);
 
-                    // 填充可編輯欄位（預設值）
-                    analysisElements.lifeAspect.value = '個人成長、情緒管理';
-                    analysisElements.emotionTags.value = '平靜、反思';
-                    analysisElements.psychologicalConstruct.value = '自我探索'; // 預設選擇
-
-                    // 原始日誌內容
-                    analysisElements.modalLogContent.textContent = targetRecord.recordText;
-
-                } else {
-                    // 沒有記錄時的顯示
-                    for (const key in analysisElements) {
-                        if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
-                            analysisElements[key].textContent = '尚無記錄可供分析。';
+                    request.onsuccess = (event) => {
+                        console.log('Record iframe: put 操作成功，ID:', event.target.result);
+                        // 這裡不需要 resolve，因為會在 transaction.oncomplete 中處理
                         }
-                    }
-                    analysisElements.lifeAspect.value = '';
-                    analysisElements.emotionTags.value = '';
-                    analysisElements.psychologicalConstruct.value = '';
-                    analysisElements.markAsEssence.checked = false;
-                    analysisElements.modalLogContent.textContent = '尚無記錄。';
-                    showMessage('尚無記錄可供分析。', 'info');
+                    };
+                    request.onerror = (event) => {
+                        console.error('Record iframe: put 操作失敗:', event.target.error);
+                        // 錯誤會被 transaction.onerror 捕獲並處理
+                    };
+                } catch (e) {
+                    console.error('Record iframe: addRecord 事務或物件儲存操作失敗:', e);
+                    showMessage('無法儲存記錄，請檢查資料庫操作', 'error');
+                    reject(e);
                 }
-            } catch (error) {
-                console.error('Analyze iframe: 執行分析失敗:', error);
-                showMessage('分析失敗，請稍後再試', 'error');
-                // 錯誤時清空並顯示錯誤訊息
-                for (const key in analysisElements) {
-                    if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
-                        analysisElements[key].textContent = '分析失敗。';
-                    }
-                }
-                analysisElements.lifeAspect.value = '';
-                analysisElements.emotionTags.value = '';
-                analysisElements.psychologicalConstruct.value = '';
-                analysisElements.markAsEssence.checked = false;
-                analysisElements.modalLogContent.textContent = '分析失敗。';
-            }
+            });
         }
 
-        // 原始日誌彈窗邏輯
-        document.getElementById('showOriginalLogBtn').addEventListener('click', function() {
-            document.getElementById('originalLogModal').style.display = 'flex'; // 使用 flex 居中
-        });
+        /**
+         * 設定記錄按鈕的點擊事件，處理記錄儲存邏輯。
+         */
+        function setupActionButtons() {
+            document.querySelectorAll('.action-button').forEach(button => {
+                button.addEventListener('click', async function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    const textarea = document.getElementById('recordTextarea');
+                    const recordText = textarea ? textarea.value.trim() : '';
+                    
+                    if (!recordText) {
+                        showMessage('請輸入記錄內容', 'error');
+                        return;
+                    }
+                    
+                    let journalType = '';
+                    if (this.textContent.includes('航行日誌')) {
+                        journalType = 'navigation_log';
+                    } else if (this.textContent.includes('觸發型事件')) {
+                        journalType = 'trigger_event';
+                    } else if (this.textContent.includes('日記映射')) {
+                        journalType = 'diary_mapping';
+                    }
 
-        document.getElementById('closeModalBtn').addEventListener('click', function() {
-            document.getElementById('originalLogModal').style.display = 'none';
-        });
+                    try {
+                        await addRecord(recordText, journalType);
+                        showMessage(`記錄已儲存！`);
+                        
+                        if (textarea) {
+                            textarea.value = ''; // 清空輸入框
+                        }
+                        
+                        // 儲存成功後，向父視窗發送訊息以切換頁籤
+                        if (window.parent) {
+                            window.parent.postMessage({ type: 'recordSaved', targetTab: 'analyze' }, '*');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Record iframe: 儲存失敗:', error);
+                        // showMessage 已經在 addRecord 內部處理，這裡可以省略或根據需要調整
+                    }
+                    
+                });
+            });
+        }
 
-        // 點擊彈窗外部關閉
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('originalLogModal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-
-        // 監聽來自父視窗的訊息
-        window.addEventListener('message', async (event) => {
-            if (event.data && event.data.type === 'loadRecordForAnalysis' && typeof event.data.recordId !== 'undefined') {
-                console.log(`Analyze iframe 收到來自父視窗的訊息，載入記錄 ID: ${event.data.recordId}。`);
-                await initDB(); // Ensure DB is initialized before fetching
-                await performAnalysis(event.data.recordId); // 執行對特定記錄的分析
-            }
-        });
-
-        // 頁面載入時初始化並執行分析
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Record iframe: DOMContentLoaded 觸發。');
+            try {
+                await initDB();
+                
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Analyze iframe: DOMContentLoaded 觸發。');
             try {
                 await initDB();
-                // 初始載入時，如果沒有從父視窗傳遞特定 recordId，則載入最新記錄
-                // 這是為了處理直接進入分析頁面的情況
-                // 注意：在實際應用中，如果 analyze_content.html 是作為獨立頁面載入，
-                // 則需要一種機制來獲取初始的 recordId (例如從 URL 參數)。
-                // 由於這裡是 iframe，我們依賴父視窗的 postMessage。
-                // 因此，這裡的 performAnalysis() 呼叫會預設載入最新記錄，
-                // 直到接收到來自父視窗的特定 recordId 訊息為止。
-                await performAnalysis(); 
-                console.log('Analyze iframe: 頁面初始化完成。');
+                setupActionButtons();
+                const textarea = document.getElementById('recordTextarea');
+                if (textarea) {
+                    textarea.focus();
+                }
+                console.log('Record iframe: 頁面初始化完成。');
             } catch (error) {
-                console.error('Analyze iframe: 初始化或分析失敗:', error);
-                showMessage('分析頁面初始化失敗，請檢查瀏覽器控制台', 'error');
+                console.error('Record iframe: 頁面初始化失敗，捕獲錯誤:', error);
+                showMessage('記錄頁面初始化失敗，請檢查瀏覽器控制台', 'error');
             }
         });
     </script>
