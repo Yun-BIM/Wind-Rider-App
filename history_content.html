@@ -36,6 +36,12 @@
             font-size: 14px;
             line-height: 1.4;
             color: #2d3748;
+            cursor: pointer; /* Add cursor pointer to indicate clickability */
+            transition: background-color 0.2s ease; /* Add transition for hover effect */
+        }
+
+        .history-item:hover {
+            background-color: #e2e8f0; /* Add hover effect */
         }
 
         .history-item:last-child {
@@ -65,12 +71,10 @@
     </style>
 </head>
 <body>
-    <!-- 這裡的內容是歷史頁面專屬的 -->
     <h2 class="section-title">歷史記錄</h2>
     
     <div id="historyPanel" class="history-panel">
-        <!-- 歷史記錄將在這裡動態載入 -->
-    </div>
+        </div>
 
     <script>
         // IndexedDB 資料庫初始化 (此 iframe 獨立操作)
@@ -249,6 +253,16 @@
                     latestFive.forEach(r => {
                         const item = document.createElement('div');
                         item.className = 'history-item';
+                        item.dataset.recordId = r.id; // Store the record ID
+                        item.addEventListener('click', () => {
+                            // Send message to parent with record ID
+                            if (window.parent) {
+                                window.parent.postMessage({
+                                    type: 'navigateToAnalyze',
+                                    recordId: r.id
+                                }, '*'); // Use '*' for development, replace with specific origin in production
+                            }
+                        });
 
                         const dateObj = new Date(r.createdAt);
                         const dateStr = dateObj.toLocaleString('zh-TW', { 
