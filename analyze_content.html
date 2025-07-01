@@ -128,7 +128,9 @@
             margin-top: 5px;
         }
 
-        .original-log-button {
+        .original-log-button,
+        .answer-question-button,
+        .submit-answer-button { /* Added new button styles */
             width: 100%;
             padding: 12px 20px;
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -142,13 +144,96 @@
             margin-top: 15px;
         }
 
-        .original-log-button:hover {
+        .original-log-button:hover,
+        .answer-question-button:hover,
+        .submit-answer-button:hover {
             opacity: 0.9;
             transform: translateY(-2px);
         }
 
-        .original-log-button:active {
+        .original-log-button:active,
+        .answer-question-button:active,
+        .submit-answer-button:active {
             transform: scale(0.98);
+        }
+        
+        /* New styles for answering section */
+        .answer-section {
+            background: #e6fffa; /* Light teal background */
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #b2f5ea;
+        }
+
+        .answer-input-area textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #a0aec0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        .conversation-history {
+            margin-top: 20px;
+            border-top: 1px dashed #cbd5e0;
+            padding-top: 15px;
+        }
+
+        .conversation-item {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .conversation-item strong {
+            color: #2d3748;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .conversation-item p {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 5px;
+        }
+
+        .conversation-item .ai-response {
+            background-color: #f0f4f8; /* Lighter background for AI response */
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .next-question-button {
+            background: #9f7aea; /* Purple for next question */
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 10px;
+            width: auto;
+            display: block; /* Make it a block element to take full width */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .next-question-button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
         }
 
         /* 原始日誌彈窗 */
@@ -302,7 +387,21 @@
             <div id="guidedQuestions" class="analysis-value">
                 <span class="analysis-placeholder">AI 自動分析帶出底層信念的提問...</span>
             </div>
+            <button id="answerQuestionBtn" class="answer-question-button" style="display: none;">回答提問</button>
         </div>
+
+        <div id="answerSection" class="answer-section" style="display: none;">
+            <div class="analysis-label">您的回答</div>
+            <div class="answer-input-area">
+                <textarea id="userAnswerTextarea" placeholder="在這裡輸入您的回答..."></textarea>
+            </div>
+            <button id="submitAnswerBtn" class="submit-answer-button">提交回答</button>
+            <button id="cancelAnswerBtn" class="submit-answer-button" style="background: #e53e3e;">取消回答</button>
+        </div>
+
+        <div id="conversationHistory" class="conversation-history" style="display: none;">
+            <div class="analysis-label">對話歷史</div>
+            </div>
 
         <button id="showOriginalLogBtn" class="original-log-button">原始日誌</button>
     </div>
@@ -321,7 +420,11 @@
         const DB_NAME = 'WindRiderDB';
         const DB_VERSION = 5; // *** 與主頁面和其他 iframe 保持一致 ***
         const STORE_NAME_RECORDS = 'records';
-        const STORE_NAME_PROFILE = 'userProfile'; // 確保 userProfile 也被處理
+        const STORE_NAME_PROFILE = 'userProfile';
+        const STORE_NAME_GUIDED_ANSWERS = 'guidedAnswers'; // 新增的 Object Store 名稱
+
+        let currentRecordId = null; // 當前正在分析的記錄 ID
+        let currentQuestion = null; // 當前展示的引導提問
 
         /**
          * 顯示應用程式訊息 (成功或錯誤)。
@@ -354,6 +457,7 @@
 
         /**
          * 初始化 IndexedDB 資料庫。
+         * 在 onupgradeneeded 中新增 guidedAnswers object store。
          */
         function initDB() {
             return new Promise((resolve, reject) => {
@@ -370,7 +474,7 @@
                     db = event.target.result;
                     console.log('Analyze iframe: IndexedDB 連接成功，版本:', db.version);
                     // 檢查必要的 Object Stores 是否存在
-                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE)) {
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS) || !db.objectStoreNames.contains(STORE_NAME_PROFILE) || !db.objectStoreNames.contains(STORE_NAME_GUIDED_ANSWERS)) {
                         console.warn('Analyze iframe: 警告：資料庫連接成功，但必要的 Object Stores 未完全建立。可能需要手動清除資料庫並重試。');
                     }
                     resolve(db);
@@ -414,6 +518,24 @@
                     } else {
                         console.log('Analyze iframe: userProfile Object Store 已存在 (無需創建)');
                     }
+
+                    // *** 新增：創建 guidedAnswers object store ***
+                    if (!db.objectStoreNames.contains(STORE_NAME_GUIDED_ANSWERS)) {
+                        try {
+                            const guidedAnswersStore = db.createObjectStore(STORE_NAME_GUIDED_ANSWERS, { keyPath: 'id', autoIncrement: true });
+                            guidedAnswersStore.createIndex('recordId', 'recordId', { unique: false }); // 連結到原始日誌
+                            guidedAnswersStore.createIndex('createdAt', 'createdAt', { unique: false });
+                            console.log('Analyze iframe: guidedAnswers Object Store 已創建');
+                        } catch (e) {
+                            console.error('Analyze iframe: 創建 guidedAnswers Object Store 失敗:', e);
+                            showMessage('資料庫升級錯誤：無法創建引導回答儲存', 'error');
+                            event.preventDefault();
+                            reject(e);
+                            return;
+                        }
+                    } else {
+                        console.log('Analyze iframe: guidedAnswers Object Store 已存在 (無需創建)');
+                    }
                 };
             });
         }
@@ -425,7 +547,7 @@
          */
         async function getRecordById(id) {
             if (!db) {
-                await initDB(); // 確保 DB 已初始化
+                await initDB(); 
             }
             return new Promise((resolve, reject) => {
                 try {
@@ -447,7 +569,7 @@
                     const request = store.get(id);
 
                     request.onsuccess = (event) => {
-                        resolve(event.target.result); // 返回指定 ID 的記錄
+                        resolve(event.target.result); 
                     };
                     request.onerror = (event) => {
                         console.error('Analyze iframe: 獲取指定記錄請求失敗:', event.target.error);
@@ -466,15 +588,14 @@
          */
         async function getLatestRecord() {
             if (!db) {
-                await initDB(); // 確保 DB 已初始化
+                await initDB(); 
             }
             return new Promise((resolve, reject) => {
                 try {
-                    // 檢查 object store 是否存在
                     if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
                         console.error('Analyze iframe: getLatestRecord 錯誤 - records 物件儲存不存在。');
                         showMessage('無法獲取記錄，資料庫結構異常', 'error');
-                        resolve(null); // 返回 null 而不是 reject，讓後續流程可以繼續
+                        resolve(null); 
                         return;
                     }
 
@@ -493,9 +614,9 @@
                         const cursor = event.target.result;
                         if (cursor) {
                             latestRecord = cursor.value;
-                            resolve(latestRecord); // 返回最新記錄的完整物件
+                            resolve(latestRecord); 
                         } else {
-                            resolve(null); // 沒有記錄
+                            resolve(null); 
                         }
                     };
                     request.onerror = (event) => {
@@ -509,10 +630,107 @@
             });
         }
 
+        /**
+         * 從 guidedAnswers store 獲取與特定 recordId 關聯的所有回答。
+         * @param {number} recordId - 原始日誌的 ID。
+         * @returns {Promise<Array>} Promise 對象，解析為回答陣列。
+         */
+        async function getGuidedAnswersByRecordId(recordId) {
+            if (!db) {
+                await initDB();
+            }
+            return new Promise((resolve, reject) => {
+                if (!db.objectStoreNames.contains(STORE_NAME_GUIDED_ANSWERS)) {
+                    console.warn('Analyze iframe: guidedAnswers Object Store 不存在。');
+                    resolve([]);
+                    return;
+                }
+                const tx = db.transaction([STORE_NAME_GUIDED_ANSWERS], 'readonly');
+                const store = tx.objectStore(STORE_NAME_GUIDED_ANSWERS);
+                const index = store.index('recordId');
+                const request = index.getAll(recordId);
+
+                request.onsuccess = () => {
+                    resolve(request.result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))); // 按時間排序
+                };
+                request.onerror = (event) => {
+                    console.error('Analyze iframe: 獲取引導回答失敗:', event.target.error);
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        /**
+         * 將使用者的回答和 AI 的回覆/下一個問題存入 guidedAnswers store。
+         * @param {number} recordId - 關聯的原始日誌 ID。
+         * @param {string} question - 引導提問的內容。
+         * @param {string} answer - 使用者的回答。
+         * @param {string} aiResponse - AI 對回答的分析和回覆。
+         * @param {string} nextQuestion - AI 提出的下一個問題。
+         */
+        async function saveGuidedAnswer(recordId, question, answer, aiResponse, nextQuestion) {
+            if (!db) {
+                await initDB();
+            }
+            const answerData = {
+                recordId: recordId,
+                question: question,
+                answer: answer,
+                aiResponse: aiResponse,
+                nextQuestion: nextQuestion,
+                createdAt: new Date().toISOString()
+            };
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME_GUIDED_ANSWERS], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME_GUIDED_ANSWERS);
+                const request = store.add(answerData);
+
+                request.onsuccess = () => {
+                    console.log('Analyze iframe: 引導回答已儲存:', request.result);
+                    showMessage('您的回答已儲存！', 'success');
+                    resolve(request.result);
+                };
+                request.onerror = (event) => {
+                    console.error('Analyze iframe: 儲存引導回答失敗:', event.target.error);
+                    showMessage('儲存回答失敗，請稍後再試', 'error');
+                    reject(event.target.error);
+                };
+            });
+        }
+
+        /**
+         * 模擬 AI 的分析和生成下一個問題。
+         * 在實際應用中，這裡會調用後端 LLM API。
+         * @param {string} currentQuestion - 當前問題
+         * @param {string} userAnswer - 使用者的回答
+         * @returns {Object} 包含模擬 AI 回覆和下一個問題的物件。
+         */
+        function simulateAIResponse(currentQuestion, userAnswer) {
+            const responses = [
+                {
+                    aiResponse: "感謝您的分享。從您的回答中，我感受到您對這件事的重視。這是否反映了您深層的價值觀？",
+                    nextQuestion: "在這次經歷中，您最大的收穫是什麼？這對您未來有何影響？"
+                },
+                {
+                    aiResponse: "您的思考很有深度。對於這個問題，您覺得還有哪些方面是您尚未探索的？",
+                    nextQuestion: "如果用一個詞來形容您現在的心情，會是什麼？為什麼？"
+                },
+                {
+                    aiResponse: "這是一個很有趣的觀點。是什麼讓您產生這樣的想法？",
+                    nextQuestion: "您認為這次經歷對您的人際關係產生了什麼影響？"
+                },
+                {
+                    aiResponse: "我理解您的感受。在這種情況下，您通常會如何應對？",
+                    nextQuestion: "您對未來的自己有什麼期待？您希望如何實現它們？"
+                }
+            ];
+            return responses[Math.floor(Math.random() * responses.length)];
+        }
+
 
         /**
          * 執行分析並顯示結果。
-         * 這裡僅為範例，實際分析需要後端或 LLM 整合。
          * @param {number} [recordId] - 可選的，要分析的記錄 ID。如果未提供，則分析最新記錄。
          */
         async function performAnalysis(recordId = null) {
@@ -529,12 +747,18 @@
                 psychologicalConstruct: document.getElementById('psychologicalConstruct'),
                 underlyingBelief: document.getElementById('underlyingBelief'),
                 guidedQuestions: document.getElementById('guidedQuestions'),
-                modalLogContent: document.getElementById('modalLogContent')
+                modalLogContent: document.getElementById('modalLogContent'),
+                answerQuestionBtn: document.getElementById('answerQuestionBtn'),
+                answerSection: document.getElementById('answerSection'),
+                userAnswerTextarea: document.getElementById('userAnswerTextarea'),
+                submitAnswerBtn: document.getElementById('submitAnswerBtn'),
+                cancelAnswerBtn: document.getElementById('cancelAnswerBtn'),
+                conversationHistory: document.getElementById('conversationHistory')
             };
 
             // 清空舊內容並顯示載入狀態
             for (const key in analysisElements) {
-                if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox' && key !== 'answerSection' && key !== 'conversationHistory') {
                     analysisElements[key].innerHTML = '<span class="analysis-placeholder">正在分析中...</span>';
                 }
             }
@@ -543,6 +767,12 @@
             analysisElements.emotionTags.value = '';
             analysisElements.psychologicalConstruct.value = '';
             analysisElements.markAsEssence.checked = false;
+            analysisElements.userAnswerTextarea.value = ''; // 清空回答輸入框
+
+            // 隱藏回答區塊和對話歷史
+            analysisElements.answerSection.style.display = 'none';
+            analysisElements.conversationHistory.style.display = 'none';
+            analysisElements.answerQuestionBtn.style.display = 'none';
 
 
             try {
@@ -556,6 +786,7 @@
                 }
 
                 if (targetRecord) {
+                    currentRecordId = targetRecord.id; // 設定當前記錄 ID
                     console.log('Analyze iframe: 獲取到要分析的記錄:', targetRecord);
                     
                     // 填充只讀欄位
@@ -578,7 +809,10 @@
                     
                     const simulatedBelief = ['自我價值', '人際連結', '成長潛力', '安全感'][Math.floor(Math.random() * 4)];
                     analysisElements.underlyingBelief.textContent = `這段日誌可能反映了您對「${simulatedBelief}」的底層信念。`;
-                    analysisElements.guidedQuestions.textContent = `關於「${simulatedBelief}」，您可以思考：這對您意味著什麼？如何進一步探索？`;
+                    
+                    currentQuestion = `關於「${simulatedBelief}」，您可以思考：這對您意味著什麼？如何進一步探索？`;
+                    analysisElements.guidedQuestions.textContent = currentQuestion;
+                    analysisElements.answerQuestionBtn.style.display = 'block'; // 顯示回答按鈕
 
                     // 填充可編輯欄位（預設值）
                     analysisElements.lifeAspect.value = '個人成長、情緒管理';
@@ -588,10 +822,13 @@
                     // 原始日誌內容
                     analysisElements.modalLogContent.textContent = targetRecord.recordText;
 
+                    // 載入並顯示此記錄的對話歷史
+                    await loadConversationHistory(currentRecordId);
+
                 } else {
                     // 沒有記錄時的顯示
                     for (const key in analysisElements) {
-                        if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                        if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox' && key !== 'answerSection' && key !== 'conversationHistory') {
                             analysisElements[key].textContent = '尚無記錄可供分析。';
                         }
                     }
@@ -607,7 +844,7 @@
                 showMessage('分析失敗，請稍後再試', 'error');
                 // 錯誤時清空並顯示錯誤訊息
                 for (const key in analysisElements) {
-                    if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox') {
+                    if (analysisElements[key] && analysisElements[key].tagName !== 'INPUT' && analysisElements[key].tagName !== 'SELECT' && analysisElements[key].type !== 'checkbox' && key !== 'answerSection' && key !== 'conversationHistory') {
                         analysisElements[key].textContent = '分析失敗。';
                     }
                 }
@@ -618,6 +855,55 @@
                 analysisElements.modalLogContent.textContent = '分析失敗。';
             }
         }
+
+        /**
+         * 顯示對話歷史記錄。
+         * @param {number} recordId - 關聯的原始日誌 ID。
+         */
+        async function loadConversationHistory(recordId) {
+            const conversationHistoryDiv = document.getElementById('conversationHistory');
+            conversationHistoryDiv.innerHTML = '<div class="analysis-label">對話歷史</div>'; // 清空並保留標題
+            conversationHistoryDiv.style.display = 'none'; // 預設隱藏
+
+            try {
+                const answers = await getGuidedAnswersByRecordId(recordId);
+                if (answers.length > 0) {
+                    conversationHistoryDiv.style.display = 'block'; // 有歷史才顯示
+                    answers.forEach(item => {
+                        const conversationItem = document.createElement('div');
+                        conversationItem.className = 'conversation-item';
+                        conversationItem.innerHTML = `
+                            <strong>提問:</strong> <p>${item.question}</p>
+                            <strong>您的回答:</strong> <p>${item.answer}</p>
+                            <div class="ai-response"><strong>AI 回覆:</strong> <p>${item.aiResponse}</p></div>
+                        `;
+                        if (item.nextQuestion) {
+                             conversationItem.innerHTML += `<div class="ai-response" style="margin-top: 5px;"><strong>AI 下一個提問:</strong> <p>${item.nextQuestion}</p></div>`;
+                        }
+                        conversationHistoryDiv.appendChild(conversationItem);
+                    });
+
+                    // 檢查最後一個回答是否有下一個問題，如果沒有，則不再顯示回答按鈕
+                    const lastAnswer = answers[answers.length - 1];
+                    if (lastAnswer && lastAnswer.nextQuestion) {
+                        document.getElementById('guidedQuestions').textContent = lastAnswer.nextQuestion; // 更新主提問為 AI 的下一個問題
+                        currentQuestion = lastAnswer.nextQuestion; // 更新當前提問變數
+                        document.getElementById('answerQuestionBtn').style.display = 'block';
+                    } else {
+                        document.getElementById('answerQuestionBtn').style.display = 'none'; // 如果沒有下一個問題，隱藏按鈕
+                        document.getElementById('guidedQuestions').textContent = "本次引導已結束，感謝您的探索。";
+                    }
+
+                } else {
+                    // 如果沒有歷史記錄，確保顯示初始問題和回答按鈕
+                    document.getElementById('answerQuestionBtn').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Analyze iframe: 載入對話歷史失敗:', error);
+                showMessage('載入對話歷史失敗', 'error');
+            }
+        }
+
 
         // 原始日誌彈窗邏輯
         document.getElementById('showOriginalLogBtn').addEventListener('click', function() {
@@ -636,12 +922,65 @@
             }
         });
 
+        // 「回答提問」按鈕點擊事件
+        document.getElementById('answerQuestionBtn').addEventListener('click', function() {
+            document.getElementById('answerSection').style.display = 'block'; // 顯示回答區塊
+            document.getElementById('answerQuestionBtn').style.display = 'none'; // 隱藏回答按鈕
+            document.getElementById('userAnswerTextarea').value = ''; // 清空輸入框
+            document.getElementById('userAnswerTextarea').focus(); // 自動聚焦
+        });
+
+        // 「取消回答」按鈕點擊事件
+        document.getElementById('cancelAnswerBtn').addEventListener('click', function() {
+            document.getElementById('answerSection').style.display = 'none'; // 隱藏回答區塊
+            document.getElementById('answerQuestionBtn').style.display = 'block'; // 重新顯示回答按鈕
+            document.getElementById('userAnswerTextarea').value = ''; // 清空輸入框
+        });
+
+        // 「提交回答」按鈕點擊事件
+        document.getElementById('submitAnswerBtn').addEventListener('click', async function() {
+            const userAnswer = document.getElementById('userAnswerTextarea').value.trim();
+            if (!userAnswer) {
+                showMessage('請輸入您的回答', 'error');
+                return;
+            }
+
+            if (currentRecordId === null || currentQuestion === null) {
+                showMessage('無法儲存回答，缺少關聯記錄或提問', 'error');
+                return;
+            }
+
+            // 模擬 AI 回覆和下一個問題
+            const aiResults = simulateAIResponse(currentQuestion, userAnswer);
+
+            try {
+                await saveGuidedAnswer(currentRecordId, currentQuestion, userAnswer, aiResults.aiResponse, aiResults.nextQuestion);
+                document.getElementById('userAnswerTextarea').value = ''; // 清空輸入框
+                document.getElementById('answerSection').style.display = 'none'; // 隱藏回答區塊
+                
+                // 重新載入對話歷史以顯示新回答和 AI 回覆
+                await loadConversationHistory(currentRecordId); 
+
+                // 如果 AI 還有下一個問題，則再次顯示「回答提問」按鈕
+                if (aiResults.nextQuestion) {
+                    document.getElementById('answerQuestionBtn').style.display = 'block';
+                } else {
+                    document.getElementById('answerQuestionBtn').style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Analyze iframe: 提交回答失敗:', error);
+                showMessage('提交回答失敗', 'error');
+            }
+        });
+
+
         // 監聽來自父視窗的訊息
         window.addEventListener('message', async (event) => {
             if (event.data && event.data.type === 'loadRecordForAnalysis' && typeof event.data.recordId !== 'undefined') {
                 console.log(`Analyze iframe 收到來自父視窗的訊息，載入記錄 ID: ${event.data.recordId}。`);
-                await initDB(); // Ensure DB is initialized before fetching
-                await performAnalysis(event.data.recordId); // 執行對特定記錄的分析
+                await initDB(); 
+                await performAnalysis(event.data.recordId); 
             }
         });
 
@@ -650,11 +989,7 @@
             console.log('Analyze iframe: DOMContentLoaded 觸發。');
             try {
                 await initDB();
-                // 初始載入時，如果沒有從父視窗傳遞特定 recordId，則載入最新記錄
-                // 這是為了處理直接進入分析頁面的情況
-                if (!window.name.includes('recordId')) { // A simple check, can be improved
-                   await performAnalysis(); 
-                }
+                await performAnalysis(); 
                 console.log('Analyze iframe: 頁面初始化完成。');
             } catch (error) {
                 console.error('Analyze iframe: 初始化或分析失敗:', error);
