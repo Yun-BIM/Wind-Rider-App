@@ -217,7 +217,6 @@
     <h2 class="section-title">分析結果</h2>
     
     <div class="analysis-container">
-        <!-- 標題 -->
         <div class="analysis-group">
             <div class="analysis-label">標題</div>
             <div id="analysisTitle" class="analysis-value">
@@ -225,7 +224,6 @@
             </div>
         </div>
 
-        <!-- 建檔時間 -->
         <div class="analysis-group">
             <div class="analysis-label">建檔時間</div>
             <div id="creationTime" class="analysis-value">
@@ -233,7 +231,6 @@
             </div>
         </div>
 
-        <!-- 日誌類型 -->
         <div class="analysis-group">
             <div class="analysis-label">日誌類型</div>
             <div id="journalType" class="analysis-value">
@@ -241,7 +238,6 @@
             </div>
         </div>
 
-        <!-- 語音層級 -->
         <div class="analysis-group">
             <div class="analysis-label">語音層級</div>
             <div id="voiceLevel" class="analysis-value">
@@ -249,7 +245,6 @@
             </div>
         </div>
 
-        <!-- 語音分析 -->
         <div class="analysis-group">
             <div class="analysis-label">語音分析</div>
             <div id="voiceAnalysisReason" class="analysis-value">
@@ -257,7 +252,6 @@
             </div>
         </div>
 
-        <!-- 標記精華 -->
         <div class="analysis-group">
             <div class="analysis-label">標記精華</div>
             <div class="checkbox-group">
@@ -266,19 +260,16 @@
             </div>
         </div>
 
-        <!-- 生活面向 (可修改) -->
         <div class="analysis-group">
             <div class="analysis-label">生活面向</div>
             <input type="text" id="lifeAspect" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
         </div>
 
-        <!-- 情緒標籤 (可修改) -->
         <div class="analysis-group">
             <div class="analysis-label">情緒標籤</div>
             <input type="text" id="emotionTags" class="editable-input" placeholder="AI 自動分析，自動帶出，但可修改...">
         </div>
 
-        <!-- 關鍵句子 -->
         <div class="analysis-group">
             <div class="analysis-label">關鍵句子</div>
             <div id="keySentences" class="analysis-value">
@@ -286,7 +277,6 @@
             </div>
         </div>
 
-        <!-- 心理構面 (下拉選單) -->
         <div class="analysis-group">
             <div class="analysis-label">心理構面</div>
             <select id="psychologicalConstruct" class="editable-select">
@@ -300,7 +290,6 @@
             </select>
         </div>
 
-        <!-- 底層信念 -->
         <div class="analysis-group">
             <div class="analysis-label">底層信念</div>
             <div id="underlyingBelief" class="analysis-value">
@@ -308,7 +297,6 @@
             </div>
         </div>
 
-        <!-- 引導提問 -->
         <div class="analysis-group">
             <div class="analysis-label">引導提問</div>
             <div id="guidedQuestions" class="analysis-value">
@@ -316,11 +304,9 @@
             </div>
         </div>
 
-        <!-- 原始日誌按鈕 -->
         <button id="showOriginalLogBtn" class="original-log-button">原始日誌</button>
     </div>
 
-    <!-- 原始日誌彈窗 -->
     <div id="originalLogModal" class="modal">
         <div class="modal-content">
             <span class="close-button" id="closeModalBtn">&times;</span>
@@ -433,6 +419,48 @@
         }
 
         /**
+         * 獲取指定 ID 的記錄內容。
+         * @param {number} id - 要獲取的記錄 ID。
+         * @returns {Promise<Object|null>} Promise 對象，解析為指定 ID 的記錄物件，如果沒有則為 null。
+         */
+        async function getRecordById(id) {
+            if (!db) {
+                await initDB(); // 確保 DB 已初始化
+            }
+            return new Promise((resolve, reject) => {
+                try {
+                    if (!db.objectStoreNames.contains(STORE_NAME_RECORDS)) {
+                        console.error('Analyze iframe: getRecordById 錯誤 - records 物件儲存不存在。');
+                        showMessage('無法獲取記錄，資料庫結構異常', 'error');
+                        resolve(null);
+                        return;
+                    }
+
+                    const tx = db.transaction([STORE_NAME_RECORDS], 'readonly');
+                    tx.onerror = (event) => {
+                        console.error('Analyze iframe: 獲取指定記錄事務錯誤:', event.target.error);
+                        showMessage('獲取指定記錄事務失敗', 'error');
+                        reject(event.target.error);
+                    };
+
+                    const store = tx.objectStore(STORE_NAME_RECORDS);
+                    const request = store.get(id);
+
+                    request.onsuccess = (event) => {
+                        resolve(event.target.result); // 返回指定 ID 的記錄
+                    };
+                    request.onerror = (event) => {
+                        console.error('Analyze iframe: 獲取指定記錄請求失敗:', event.target.error);
+                        reject(event.target.error);
+                    };
+                } catch (e) {
+                    console.error('Analyze iframe: getRecordById 事務或物件儲存操作失敗:', e);
+                    reject(e);
+                }
+            });
+        }
+
+        /**
          * 獲取最近一筆記錄的內容。
          * @returns {Promise<Object|null>} Promise 對象，解析為最近一筆記錄的完整物件，如果沒有則為 null。
          */
@@ -481,11 +509,13 @@
             });
         }
 
+
         /**
          * 執行分析並顯示結果。
          * 這裡僅為範例，實際分析需要後端或 LLM 整合。
+         * @param {number} [recordId] - 可選的，要分析的記錄 ID。如果未提供，則分析最新記錄。
          */
-        async function performAnalysis() {
+        async function performAnalysis(recordId = null) {
             const analysisElements = {
                 title: document.getElementById('analysisTitle'),
                 creationTime: document.getElementById('creationTime'),
@@ -516,28 +546,35 @@
 
 
             try {
-                const latestRecord = await getLatestRecord();
+                let targetRecord = null;
+                if (recordId !== null) {
+                    console.log(`Analyze iframe: 嘗試獲取記錄 ID: ${recordId} 進行分析...`);
+                    targetRecord = await getRecordById(recordId);
+                } else {
+                    console.log('Analyze iframe: 嘗試獲取最新記錄進行分析...');
+                    targetRecord = await getLatestRecord();
+                }
 
-                if (latestRecord) {
-                    console.log('Analyze iframe: 獲取到最新記錄:', latestRecord);
+                if (targetRecord) {
+                    console.log('Analyze iframe: 獲取到要分析的記錄:', targetRecord);
                     
                     // 填充只讀欄位
-                    analysisElements.title.textContent = `關於「${latestRecord.recordText.substring(0, Math.min(latestRecord.recordText.length, 15))}...」的分析`;
-                    analysisElements.creationTime.textContent = new Date(latestRecord.createdAt).toLocaleString('zh-TW', { hour12: false });
+                    analysisElements.title.textContent = `關於「${targetRecord.recordText.substring(0, Math.min(targetRecord.recordText.length, 15))}...」的分析`;
+                    analysisElements.creationTime.textContent = new Date(targetRecord.createdAt).toLocaleString('zh-TW', { hour12: false });
                     
                     const typeMap = {
                         navigation_log: '航行日誌',
                         trigger_event: '觸發型事件記錄',
                         diary_mapping: '日記映射'
                     };
-                    analysisElements.journalType.textContent = typeMap[latestRecord.journalType] || latestRecord.journalType;
+                    analysisElements.journalType.textContent = typeMap[targetRecord.journalType] || targetRecord.journalType;
 
                     // 模擬 AI 分析結果
                     const simulatedVoiceLevel = ['L0:無意識抒發層', 'L1:被動反應層', 'L2:初步覺察層', 'L3:有選擇層'][Math.floor(Math.random() * 4)];
                     analysisElements.voiceLevel.textContent = simulatedVoiceLevel;
                     analysisElements.voiceAnalysisReason.textContent = `根據內容長度與詞彙頻率，AI 判斷為 ${simulatedVoiceLevel}。`;
                     
-                    analysisElements.keySentences.textContent = `「${latestRecord.recordText.substring(0, Math.min(latestRecord.recordText.length, 30))}...」是核心句。`;
+                    analysisElements.keySentences.textContent = `「${targetRecord.recordText.substring(0, Math.min(targetRecord.recordText.length, 30))}...」是核心句。`;
                     
                     const simulatedBelief = ['自我價值', '人際連結', '成長潛力', '安全感'][Math.floor(Math.random() * 4)];
                     analysisElements.underlyingBelief.textContent = `這段日誌可能反映了您對「${simulatedBelief}」的底層信念。`;
@@ -549,7 +586,7 @@
                     analysisElements.psychologicalConstruct.value = '自我探索'; // 預設選擇
 
                     // 原始日誌內容
-                    analysisElements.modalLogContent.textContent = latestRecord.recordText;
+                    analysisElements.modalLogContent.textContent = targetRecord.recordText;
 
                 } else {
                     // 沒有記錄時的顯示
@@ -599,13 +636,26 @@
             }
         });
 
+        // 監聽來自父視窗的訊息
+        window.addEventListener('message', async (event) => {
+            if (event.data && event.data.type === 'loadRecordForAnalysis' && typeof event.data.recordId !== 'undefined') {
+                console.log(`Analyze iframe 收到來自父視窗的訊息，載入記錄 ID: ${event.data.recordId}。`);
+                await initDB(); // Ensure DB is initialized before fetching
+                await performAnalysis(event.data.recordId); // 執行對特定記錄的分析
+            }
+        });
+
         // 頁面載入時初始化並執行分析
         document.addEventListener('DOMContentLoaded', async function() {
             console.log('Analyze iframe: DOMContentLoaded 觸發。');
             try {
                 await initDB();
-                await performAnalysis(); // 頁面載入時立即執行分析
-                console.log('Analyze iframe: 頁面初始化完成並執行分析。');
+                // 初始載入時，如果沒有從父視窗傳遞特定 recordId，則載入最新記錄
+                // 這是為了處理直接進入分析頁面的情況
+                if (!window.name.includes('recordId')) { // A simple check, can be improved
+                   await performAnalysis(); 
+                }
+                console.log('Analyze iframe: 頁面初始化完成。');
             } catch (error) {
                 console.error('Analyze iframe: 初始化或分析失敗:', error);
                 showMessage('分析頁面初始化失敗，請檢查瀏覽器控制台', 'error');
